@@ -2,9 +2,9 @@
   "name": "mauboussin-fmp-proxy",
   "version": "1.0.0",
   "description": "Production-ready proxy server for Financial Modeling Prep API",
-  "main": "fmp-proxy-server-production.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node fmp-proxy-server-production.js",
+    "start": "node server.js",
     "dev": "NODE_ENV=development node fmp-proxy-server-production.js",
     "prod": "NODE_ENV=production node fmp-proxy-server-production.js"
   },
