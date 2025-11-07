@@ -29,6 +29,20 @@ app.use('/api/', limiter);
 // Get API key from environment variable
 let API_KEY = process.env.FMP_API_KEY || '';
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Mauboussin FMP API Proxy',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api/fmp/*'
+    },
+    example: '/api/fmp/profile/AAPL'
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
