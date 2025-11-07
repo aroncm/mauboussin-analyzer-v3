@@ -204,166 +204,26 @@ const MauboussinAIAnalyzer = () => {
         }
       };
 
-      // Step 7: Perform Mauboussin Analysis using Claude API
+      // Step 7: Perform Mauboussin Analysis using Backend API (which calls Claude)
       setLoadingStep('🧮 Calculating ROIC and applying Mauboussin framework...');
       
-      const analysisResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      const analysisResponse = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          messages: [
-            {
-              role: "user",
-              content: `You are a strategic analyst using Michael Mauboussin's investment frameworks.
-
-=== FINANCIAL DATA FROM SEC FILING (via Alpha Vantage API) ===
-
-Company: ${financialData.companyName} (${financialData.ticker})
-Industry: ${financialData.industry}
-Fiscal Year: ${financialData.fiscalPeriod}
-Currency: ${financialData.currency}
-
-INCOME STATEMENT:
-Revenue: ${(financialData.incomeStatement.revenue / 1e6).toFixed(1)}M
-Cost of Revenue: ${(financialData.incomeStatement.costOfRevenue / 1e6).toFixed(1)}M
-Gross Profit: ${(financialData.incomeStatement.grossProfit / 1e6).toFixed(1)}M
-Operating Expenses: ${(financialData.incomeStatement.operatingExpenses / 1e6).toFixed(1)}M
-Operating Income: ${(financialData.incomeStatement.operatingIncome / 1e6).toFixed(1)}M
-EBIT: ${(financialData.incomeStatement.ebit / 1e6).toFixed(1)}M
-Interest Expense: ${(financialData.incomeStatement.interestExpense / 1e6).toFixed(1)}M
-Tax Expense: ${(financialData.incomeStatement.taxExpense / 1e6).toFixed(1)}M
-Net Income: ${(financialData.incomeStatement.netIncome / 1e6).toFixed(1)}M
-Effective Tax Rate: ${(financialData.incomeStatement.taxRate * 100).toFixed(1)}%
-
-BALANCE SHEET:
-Total Assets: ${(financialData.balanceSheet.totalAssets / 1e6).toFixed(1)}M
-Current Assets: ${(financialData.balanceSheet.currentAssets / 1e6).toFixed(1)}M
-  - Cash: ${(financialData.balanceSheet.cash / 1e6).toFixed(1)}M
-  - Accounts Receivable: ${(financialData.balanceSheet.accountsReceivable / 1e6).toFixed(1)}M
-  - Inventory: ${(financialData.balanceSheet.inventory / 1e6).toFixed(1)}M
-PP&E (net): ${(financialData.balanceSheet.ppe / 1e6).toFixed(1)}M
-Goodwill: ${(financialData.balanceSheet.goodwill / 1e6).toFixed(1)}M
-Intangible Assets: ${(financialData.balanceSheet.intangibleAssets / 1e6).toFixed(1)}M
-
-Total Liabilities: ${(financialData.balanceSheet.totalLiabilities / 1e6).toFixed(1)}M
-Current Liabilities: ${(financialData.balanceSheet.currentLiabilities / 1e6).toFixed(1)}M
-  - Accounts Payable: ${(financialData.balanceSheet.accountsPayable / 1e6).toFixed(1)}M
-  - Short-term Debt: ${(financialData.balanceSheet.shortTermDebt / 1e6).toFixed(1)}M
-Long-term Debt: ${(financialData.balanceSheet.longTermDebt / 1e6).toFixed(1)}M
-
-Total Equity: ${(financialData.balanceSheet.totalEquity / 1e6).toFixed(1)}M
-
-CASH FLOW:
-Operating Cash Flow: ${(financialData.cashFlow.operatingCashFlow / 1e6).toFixed(1)}M
-Capital Expenditures: ${(financialData.cashFlow.capitalExpenditures / 1e6).toFixed(1)}M
-Free Cash Flow: ${(financialData.cashFlow.freeCashFlow / 1e6).toFixed(1)}M
-
-=== YOUR TASK ===
-
-Perform a complete Mauboussin competitive analysis. Calculate ROIC precisely using the data above.
-
-CRITICAL: Show all mathematical steps clearly. Use the actual numbers provided.
-
-Your response MUST be valid JSON in this EXACT format (no additional text, no markdown, no code blocks):
-
-{
-  "companyName": "${financialData.companyName}",
-  "ticker": "${financialData.ticker}",
-  "businessModel": "2-3 sentence description of how the company makes money",
-  "industry": "${financialData.industry}",
-  "fiscalYear": "${financialData.fiscalPeriod}",
-  
-  "roicAnalysis": {
-    "nopat": {
-      "ebit": "Number in millions",
-      "taxRate": "Percentage",
-      "nopatCalculated": "EBIT × (1 - tax rate) in millions",
-      "calculationShown": "Show step: EBIT $X × (1 - Y%) = NOPAT $Z"
-    },
-    "investedCapital": {
-      "method": "Operating approach: NWC + Net Fixed Assets",
-      "currentAssets": "Number in millions",
-      "currentLiabilities": "Number in millions",
-      "netWorkingCapital": "Current Assets - Current Liabilities",
-      "ppe": "PP&E in millions",
-      "goodwill": "Goodwill in millions",
-      "intangibles": "Intangibles in millions",
-      "totalIC": "Sum of components",
-      "calculationShown": "Show: NWC $X + PP&E $Y + Goodwill $Z = IC $Total",
-      "alternativeMethod": "Also show: Equity + Debt - Excess Cash"
-    },
-    "roicCalculated": {
-      "percentage": "ROIC as percentage",
-      "calculation": "NOPAT / IC = X%",
-      "interpretation": "Assessment vs industry and cost of capital"
-    },
-    "dupontDecomposition": {
-      "profitMargin": "NOPAT / Revenue as %",
-      "capitalTurnover": "Revenue / IC as ratio",
-      "validation": "Margin × Turnover = ROIC (validate)",
-      "strategyInsight": "High margin (differentiation) or high turnover (cost leadership)?"
-    },
-    "valueCreation": {
-      "estimatedWACC": "Estimate 8-12% for this industry",
-      "spread": "ROIC - WACC",
-      "verdict": "Creating/destroying value?",
-      "context": "How does moat enable this ROIC?"
-    },
-    "historicalTrend": "Is ROIC improving or declining? (mention if you need more years)",
-    "dataQuality": "Confidence in the calculations (high/medium/low)"
-  },
-  
-  "moatAnalysis": {
-    "moatType": "Network effects / Scale / Intangibles / Switching costs / Cost advantages",
-    "moatStrength": "Wide / Narrow / None with justification",
-    "evidenceForMoat": "Specific financial evidence (margins, market position, pricing power)",
-    "moatDurability": "How long can this moat last? Risks?",
-    "linkToROIC": "How does moat create the ROIC observed?"
-  },
-  
-  "expectationsAnalysis": {
-    "impliedExpectations": "What growth/ROIC is market pricing in?",
-    "currentValuation": "P/E or EV/EBITDA if you can estimate",
-    "scenarioAnalysis": "Bull / Base / Bear cases with assumptions",
-    "probabilityWeighted": "Weight the scenarios"
-  },
-  
-  "probabilistic": {
-    "baseRates": "What % of companies in this industry sustain high ROIC?",
-    "skillVsLuck": "How much is replicable skill vs luck?",
-    "keyUncertainties": "Top 2-3 uncertainties"
-  },
-  
-  "management": {
-    "capitalAllocation": "Track record and quality",
-    "strategicThinking": "Evidence of long-term focus",
-    "overallAssessment": "Trust them with capital?"
-  },
-  
-  "conclusion": {
-    "investmentThesis": "3-5 sentence thesis",
-    "keyRisks": "Top 3 risks",
-    "whatWouldChange": "What would change your view?",
-    "recommendation": "Context-dependent recommendation"
-  }
-}
-
-CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`
-            }
-          ]
+          companyData: financialData
         })
       });
 
       if (!analysisResponse.ok) {
-        throw new Error(`Analysis failed: ${analysisResponse.status}`);
+        const errorData = await analysisResponse.json();
+        throw new Error(errorData.error || `Analysis failed: ${analysisResponse.status}`);
       }
 
       const analysisData = await analysisResponse.json();
-      let analysisText = analysisData.content[0].text;
+      let analysisText = analysisData.analysis;
       
       // Strip markdown if present
       analysisText = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
