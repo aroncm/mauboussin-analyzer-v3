@@ -65,7 +65,7 @@ const MauboussinAIAnalyzer = () => {
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
           const searchResponse = await fetch(
-            `${BACKEND_URL}/api/fmp/search?query=${encodeURIComponent(companyInput)}&limit=5`
+            `${BACKEND_URL}/api/av/search?query=${encodeURIComponent(companyInput)}`
           );
           
           if (!searchResponse.ok) {
@@ -87,7 +87,7 @@ const MauboussinAIAnalyzer = () => {
 
       // Step 2: Fetch company profile
       setLoadingStep(`📊 Fetching ${ticker} company profile...`);
-      const profileResponse = await fetch(`${BACKEND_URL}/api/fmp/profile/${ticker}`);
+      const profileResponse = await fetch(`${BACKEND_URL}/api/av/overview/${ticker}`);
 
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch company profile. Check ticker symbol.');
@@ -104,7 +104,7 @@ const MauboussinAIAnalyzer = () => {
       // Step 3: Fetch Income Statement
       setLoadingStep('📈 Fetching income statement from SEC filings...');
       const incomeResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/income-statement/${ticker}?period=annual&limit=1`
+        `${BACKEND_URL}/api/av/income-statement/${ticker}`
       );
 
       if (!incomeResponse.ok) {
@@ -122,7 +122,7 @@ const MauboussinAIAnalyzer = () => {
       // Step 4: Fetch Balance Sheet
       setLoadingStep('💰 Fetching balance sheet from SEC filings...');
       const balanceResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/balance-sheet-statement/${ticker}?period=annual&limit=1`
+        `${BACKEND_URL}/api/av/balance-sheet/${ticker}`
       );
 
       if (!balanceResponse.ok) {
@@ -140,7 +140,7 @@ const MauboussinAIAnalyzer = () => {
       // Step 5: Fetch Cash Flow
       setLoadingStep('💵 Fetching cash flow statement...');
       const cashFlowResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/cash-flow-statement/${ticker}?period=annual&limit=1`
+        `${BACKEND_URL}/api/av/cash-flow/${ticker}`
       );
 
       if (!cashFlowResponse.ok) {
@@ -220,7 +220,7 @@ const MauboussinAIAnalyzer = () => {
               role: "user",
               content: `You are a strategic analyst using Michael Mauboussin's investment frameworks.
 
-=== FINANCIAL DATA FROM SEC FILING (via FMP API) ===
+=== FINANCIAL DATA FROM SEC FILING (via Alpha Vantage API) ===
 
 Company: ${financialData.companyName} (${financialData.ticker})
 Industry: ${financialData.industry}
@@ -396,7 +396,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`
 ║   MAUBOUSSIN COMPETITIVE ANALYSIS - CALCULATED ROIC               ║
 ║   ${analysis.companyName} (${analysis.ticker})                    ║
 ║   Fiscal Year: ${analysis.fiscalYear}                             ║
-║   Data Source: SEC Filings via Financial Modeling Prep           ║
+║   Data Source: SEC Filings via Alpha Vantage API                 ║
 ╚════════════════════════════════════════════════════════════════════╝
 
 📊 BUSINESS OVERVIEW
@@ -520,7 +520,7 @@ Assessment: ${analysis.management.overallAssessment}
 📊 Recommendation: ${analysis.conclusion.recommendation}
 
 ═══════════════════════════════════════════════════════════════════════
-Data: SEC Filings via Financial Modeling Prep API
+Data: SEC Filings via Alpha Vantage API
 Analysis: Mauboussin Competitive Framework
 Generated: ${new Date().toLocaleString()}
 `;
@@ -548,7 +548,7 @@ Generated: ${new Date().toLocaleString()}
             </h1>
           </div>
           <p className="text-xl text-gray-600 mb-2">Automated SEC Financial Analysis with Real ROIC</p>
-          <p className="text-sm text-gray-500">Powered by FMP API + Claude Analysis</p>
+          <p className="text-sm text-gray-500">Powered by Alpha Vantage API + Claude Analysis</p>
         </div>
 
         {/* Backend Status */}
@@ -558,7 +558,7 @@ Generated: ${new Date().toLocaleString()}
               <Server size={24} className={backendConnected ? 'text-green-600' : 'text-red-600'} />
               <div>
                 <span className={`font-medium ${backendConnected ? 'text-green-700' : 'text-red-700'}`}>
-                  Backend Server: {backendConnected ? 'Connected' : 'Not Connected'}
+                  Backend Server: {backendConnected ? 'Connected ✅' : 'Not Connected ❌'}
                 </span>
                 {!backendConnected && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -642,7 +642,7 @@ Generated: ${new Date().toLocaleString()}
                   <p className="text-gray-600">{analysis.ticker} | {analysis.industry}</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Fiscal Year: {analysis.fiscalYear} | Data: SEC via FMP API</p>
+              <p className="text-sm text-gray-500 mb-4">Fiscal Year: {analysis.fiscalYear} | Data: SEC via Alpha Vantage API</p>
               <p className="text-gray-700 text-lg leading-relaxed">{analysis.businessModel}</p>
             </div>
 
