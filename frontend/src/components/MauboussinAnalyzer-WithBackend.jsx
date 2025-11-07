@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Key, CheckCircle, Settings, Server } from 'lucide-react';
+import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server } from 'lucide-react';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [apiKeyStored, setApiKeyStored] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
@@ -27,58 +24,15 @@ const MauboussinAIAnalyzer = () => {
   // Check backend connection on mount
   useEffect(() => {
     checkBackendConnection();
-    const stored = localStorage.getItem('fmp_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setApiKeyToBackend(stored);
-    }
   }, []);
 
   const checkBackendConnection = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/fmp/profile/AAPL`);
-      setBackendConnected(response.ok || response.status === 400); // 400 means backend is up but no API key
+      const response = await fetch(`${BACKEND_URL}/health`);
+      setBackendConnected(response.ok);
     } catch (err) {
       setBackendConnected(false);
     }
-  };
-
-  const setApiKeyToBackend = async (key) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/set-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: key })
-      });
-      
-      if (response.ok) {
-        setApiKeyStored(true);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Failed to set API key:', err);
-      return false;
-    }
-  };
-
-  const saveApiKey = async () => {
-    if (apiKey.trim()) {
-      const success = await setApiKeyToBackend(apiKey.trim());
-      if (success) {
-        localStorage.setItem('fmp_api_key', apiKey.trim());
-        setApiKeyStored(true);
-        setShowApiKeyInput(false);
-      } else {
-        setError('Failed to configure backend. Make sure the server is running.');
-      }
-    }
-  };
-
-  const clearApiKey = () => {
-    localStorage.removeItem('fmp_api_key');
-    setApiKey('');
-    setApiKeyStored(false);
   };
 
   const toggleSection = (section) => {
@@ -95,13 +49,7 @@ const MauboussinAIAnalyzer = () => {
     }
 
     if (!backendConnected) {
-      setError('Backend server not connected. Please start the server: npm start');
-      return;
-    }
-
-    if (!apiKeyStored) {
-      setError('Please enter your Financial Modeling Prep API key');
-      setShowApiKeyInput(true);
+      setError('Backend server not connected. Please check your connection.');
       return;
     }
 
@@ -121,7 +69,7 @@ const MauboussinAIAnalyzer = () => {
           );
           
           if (!searchResponse.ok) {
-            throw new Error('Failed to search for company. Check your API key and backend connection.');
+            throw new Error('Failed to search for company. Please try again.');
           }
           
           const searchData = await searchResponse.json();
@@ -600,11 +548,11 @@ Generated: ${new Date().toLocaleString()}
             </h1>
           </div>
           <p className="text-xl text-gray-600 mb-2">Automated SEC Financial Analysis with Real ROIC</p>
-          <p className="text-sm text-gray-500">Powered by FMP API + Local Backend</p>
+          <p className="text-sm text-gray-500">Powered by FMP API + Claude Analysis</p>
         </div>
 
         {/* Backend Status */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-4 border-2 border-gray-200">
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Server size={24} className={backendConnected ? 'text-green-600' : 'text-red-600'} />
@@ -614,7 +562,7 @@ Generated: ${new Date().toLocaleString()}
                 </span>
                 {!backendConnected && (
                   <p className="text-sm text-gray-600 mt-1">
-                    Run: <code className="bg-gray-100 px-2 py-1 rounded">npm start</code> in the backend folder
+                    Check if your backend is running
                   </p>
                 )}
               </div>
@@ -628,64 +576,6 @@ Generated: ${new Date().toLocaleString()}
           </div>
         </div>
 
-        {/* API Key Settings */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-purple-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {apiKeyStored ? (
-                <>
-                  <CheckCircle size={24} className="text-green-600" />
-                  <span className="text-green-700 font-medium">FMP API Key Configured</span>
-                </>
-              ) : (
-                <>
-                  <Key size={24} className="text-orange-600" />
-                  <span className="text-orange-700 font-medium">FMP API Key Required</span>
-                </>
-              )}
-            </div>
-            <button
-              onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <Settings size={18} />
-              {apiKeyStored ? 'Change Key' : 'Add Key'}
-            </button>
-          </div>
-          
-          {showApiKeyInput && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-3">
-                Get your free API key at <a href="https://financialmodelingprep.com/developer" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Financial Modeling Prep</a> (250 requests/day free)
-              </p>
-              <div className="flex gap-3">
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your FMP API key"
-                  className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
-                />
-                <button
-                  onClick={saveApiKey}
-                  disabled={!backendConnected}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
-                {apiKeyStored && (
-                  <button
-                    onClick={clearApiKey}
-                    className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Search Box */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
           <div className="flex gap-4">
@@ -694,13 +584,13 @@ Generated: ${new Date().toLocaleString()}
               value={companyInput}
               onChange={(e) => setCompanyInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
-              placeholder="Enter company name or ticker (e.g., Braze or BRZE)"
+              placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
               disabled={isAnalyzing}
               className="flex-1 px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
             />
             <button
               onClick={analyzeCompany}
-              disabled={isAnalyzing || !companyInput.trim() || !backendConnected || !apiKeyStored}
+              disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
             >
               {isAnalyzing ? (
@@ -740,7 +630,7 @@ Generated: ${new Date().toLocaleString()}
           </div>
         )}
 
-        {/* Analysis Results - Same as before, keeping the full UI */}
+        {/* Analysis Results */}
         {analysis && (
           <div className="space-y-8">
             {/* Company Overview */}
@@ -756,9 +646,226 @@ Generated: ${new Date().toLocaleString()}
               <p className="text-gray-700 text-lg leading-relaxed">{analysis.businessModel}</p>
             </div>
 
-            {/* All other sections remain the same... */}
-            {/* ROIC section, Moat section, etc. - keeping them as-is from the previous version */}
-            
+            {/* ROIC Analysis */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('roic')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Calculator size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">ROIC Analysis</h3>
+                </div>
+                {expandedSections.roic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.roic && (
+                <div className="p-8 space-y-6">
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-blue-900 mb-3">NOPAT Calculation</h4>
+                    <p className="text-gray-700 mb-2"><strong>EBIT:</strong> {analysis.roicAnalysis.nopat.ebit}</p>
+                    <p className="text-gray-700 mb-2"><strong>Tax Rate:</strong> {analysis.roicAnalysis.nopat.taxRate}</p>
+                    <p className="text-gray-700 mb-3">{analysis.roicAnalysis.nopat.calculationShown}</p>
+                    <p className="text-xl font-bold text-blue-900">NOPAT = {analysis.roicAnalysis.nopat.nopatCalculated}</p>
+                  </div>
+
+                  <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-green-900 mb-3">Invested Capital</h4>
+                    <p className="text-gray-700 mb-3"><strong>Method:</strong> {analysis.roicAnalysis.investedCapital.method}</p>
+                    <p className="text-gray-700 mb-2">{analysis.roicAnalysis.investedCapital.calculationShown}</p>
+                    <p className="text-xl font-bold text-green-900 mt-4">Total IC = {analysis.roicAnalysis.investedCapital.totalIC}</p>
+                    <p className="text-sm text-gray-600 mt-3"><strong>Alternative:</strong> {analysis.roicAnalysis.investedCapital.alternativeMethod}</p>
+                  </div>
+
+                  <div className="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-purple-900 mb-3">ROIC Result</h4>
+                    <p className="text-gray-700 mb-2">{analysis.roicAnalysis.roicCalculated.calculation}</p>
+                    <p className="text-3xl font-bold text-purple-900 my-4">ROIC = {analysis.roicAnalysis.roicCalculated.percentage}</p>
+                    <p className="text-gray-700">{analysis.roicAnalysis.roicCalculated.interpretation}</p>
+                  </div>
+
+                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-yellow-900 mb-3">Value Creation Test</h4>
+                    <p className="text-gray-700 mb-2"><strong>Estimated WACC:</strong> {analysis.roicAnalysis.valueCreation.estimatedWACC}</p>
+                    <p className="text-gray-700 mb-2"><strong>Economic Spread:</strong> {analysis.roicAnalysis.valueCreation.spread}</p>
+                    <p className="text-xl font-bold text-yellow-900 my-3">{analysis.roicAnalysis.valueCreation.verdict}</p>
+                    <p className="text-gray-700">{analysis.roicAnalysis.valueCreation.context}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Moat Analysis */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('moat')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Competitive Moat Analysis</h3>
+                </div>
+                {expandedSections.moat ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.moat && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Moat Type:</p>
+                    <p className="text-gray-800 text-lg">{analysis.moatAnalysis.moatType}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Moat Strength:</p>
+                    <p className="text-gray-800 text-lg font-bold">{analysis.moatAnalysis.moatStrength}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Evidence:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.evidenceForMoat}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Durability:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.moatDurability}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Link to ROIC:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.linkToROIC}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Expectations Investing */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('expectations')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
+                </div>
+                {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.expectations && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Probabilistic Thinking */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('probabilistic')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Target size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
+                </div>
+                {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.probabilistic && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Management Quality */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('management')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Users size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
+                </div>
+                {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.management && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
+                    <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
+                    <p className="text-gray-800">{analysis.management.strategicThinking}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
+                    <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Investment Conclusion */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('conclusion')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Brain size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
+                </div>
+                {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.conclusion && (
+                <div className="p-8 space-y-6">
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                    <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
+                    <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
+                    <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
+                    <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
+                    <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Export Button */}
             <div className="flex justify-center pt-4">
               <button
@@ -775,33 +882,6 @@ Generated: ${new Date().toLocaleString()}
         {/* Footer */}
         {!isAnalyzing && !analysis && (
           <div className="text-center mt-12 space-y-6">
-            <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-purple-200">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">🚀 Setup Instructions</h3>
-              <div className="text-left space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">1</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Start the Backend Server</h4>
-                    <p className="text-sm text-gray-600">Run <code className="bg-gray-100 px-2 py-1 rounded">npm start</code> in the backend folder</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">2</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Add Your FMP API Key</h4>
-                    <p className="text-sm text-gray-600">Click "Add Key" above and paste your Financial Modeling Prep API key</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">3</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Start Analyzing</h4>
-                    <p className="text-sm text-gray-600">Enter any company name or ticker symbol and get complete analysis</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
             <blockquote className="text-gray-600 italic text-lg">
               "The big money is not in the buying or selling, but in the waiting."
               <br />
