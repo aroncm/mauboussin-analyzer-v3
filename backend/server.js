@@ -163,49 +163,141 @@ app.post('/api/analyze', async (req, res) => {
   }
 
   try {
-    const prompt = `You are a financial analyst applying Michael Mauboussin's investment frameworks to analyze companies. 
+    const prompt = `You are a strategic analyst using Michael Mauboussin's investment frameworks.
 
-Here is the company financial data:
+=== FINANCIAL DATA FROM SEC FILING (via Alpha Vantage API) ===
 
-${JSON.stringify(companyData, null, 2)}
+Company: ${companyData.companyName} (${companyData.ticker})
+Industry: ${companyData.industry}
+Fiscal Year: ${companyData.fiscalPeriod}
+Currency: ${companyData.currency}
 
-Please provide a comprehensive analysis following Mauboussin's framework:
+INCOME STATEMENT:
+Revenue: ${(companyData.incomeStatement.revenue / 1e6).toFixed(1)}M
+Cost of Revenue: ${(companyData.incomeStatement.costOfRevenue / 1e6).toFixed(1)}M
+Gross Profit: ${(companyData.incomeStatement.grossProfit / 1e6).toFixed(1)}M
+Operating Expenses: ${(companyData.incomeStatement.operatingExpenses / 1e6).toFixed(1)}M
+Operating Income: ${(companyData.incomeStatement.operatingIncome / 1e6).toFixed(1)}M
+EBIT: ${(companyData.incomeStatement.ebit / 1e6).toFixed(1)}M
+Interest Expense: ${(companyData.incomeStatement.interestExpense / 1e6).toFixed(1)}M
+Tax Expense: ${(companyData.incomeStatement.taxExpense / 1e6).toFixed(1)}M
+Net Income: ${(companyData.incomeStatement.netIncome / 1e6).toFixed(1)}M
+Effective Tax Rate: ${(companyData.incomeStatement.taxRate * 100).toFixed(1)}%
 
-1. **ROIC Analysis**
-   - Calculate ROIC using the financial data provided
-   - Show your calculations step-by-step
-   - Perform DuPont analysis to understand drivers
-   - Compare to WACC to test value creation
+BALANCE SHEET:
+Total Assets: ${(companyData.balanceSheet.totalAssets / 1e6).toFixed(1)}M
+Current Assets: ${(companyData.balanceSheet.currentAssets / 1e6).toFixed(1)}M
+  - Cash: ${(companyData.balanceSheet.cash / 1e6).toFixed(1)}M
+  - Accounts Receivable: ${(companyData.balanceSheet.accountsReceivable / 1e6).toFixed(1)}M
+  - Inventory: ${(companyData.balanceSheet.inventory / 1e6).toFixed(1)}M
+PP&E (net): ${(companyData.balanceSheet.ppe / 1e6).toFixed(1)}M
+Goodwill: ${(companyData.balanceSheet.goodwill / 1e6).toFixed(1)}M
+Intangible Assets: ${(companyData.balanceSheet.intangibleAssets / 1e6).toFixed(1)}M
 
-2. **Competitive Moat Analysis**
-   Evaluate across these five dimensions:
-   - Intangible Assets (brands, patents, regulatory)
-   - Switching Costs (for customers)
-   - Network Effects (does value increase with users?)
-   - Cost Advantages (scale, location, unique assets)
-   - Efficient Scale (limited competitive market)
+Total Liabilities: ${(companyData.balanceSheet.totalLiabilities / 1e6).toFixed(1)}M
+Current Liabilities: ${(companyData.balanceSheet.currentLiabilities / 1e6).toFixed(1)}M
+  - Accounts Payable: ${(companyData.balanceSheet.accountsPayable / 1e6).toFixed(1)}M
+  - Short-term Debt: ${(companyData.balanceSheet.shortTermDebt / 1e6).toFixed(1)}M
+Long-term Debt: ${(companyData.balanceSheet.longTermDebt / 1e6).toFixed(1)}M
 
-3. **Expectations Analysis**
-   - What expectations are baked into current valuation?
-   - What needs to happen for stock to outperform?
-   - What's priced in vs. what's likely?
+Total Equity: ${(companyData.balanceSheet.totalEquity / 1e6).toFixed(1)}M
 
-4. **Probabilistic Thinking**
-   - What are the key uncertainties?
-   - Range of possible outcomes
-   - Base rates for similar situations
+CASH FLOW:
+Operating Cash Flow: ${(companyData.cashFlow.operatingCashFlow / 1e6).toFixed(1)}M
+Capital Expenditures: ${(companyData.cashFlow.capitalExpenditures / 1e6).toFixed(1)}M
+Free Cash Flow: ${(companyData.cashFlow.freeCashFlow / 1e6).toFixed(1)}M
 
-5. **Management Quality**
-   - Capital allocation track record
-   - Incentive alignment
-   - Communication quality
+=== YOUR TASK ===
 
-6. **Investment Conclusion**
-   - Overall assessment
-   - Key risks and opportunities
-   - Is this a buy, hold, or avoid?
+Perform a complete Mauboussin competitive analysis. Calculate ROIC precisely using the data above.
 
-Format your response with clear headers and bullet points. Be specific and quantitative where possible.`;
+CRITICAL: Show all mathematical steps clearly. Use the actual numbers provided.
+
+Your response MUST be valid JSON in this EXACT format (no additional text, no markdown, no code blocks):
+
+{
+  "companyName": "${companyData.companyName}",
+  "ticker": "${companyData.ticker}",
+  "businessModel": "2-3 sentence description of how the company makes money",
+  "industry": "${companyData.industry}",
+  "fiscalYear": "${companyData.fiscalPeriod}",
+  
+  "roicAnalysis": {
+    "nopat": {
+      "ebit": "Number in millions",
+      "taxRate": "Percentage",
+      "nopatCalculated": "EBIT × (1 - tax rate) in millions",
+      "calculationShown": "Show step: EBIT $X × (1 - Y%) = NOPAT $Z"
+    },
+    "investedCapital": {
+      "method": "Operating approach: NWC + Net Fixed Assets",
+      "currentAssets": "Number in millions",
+      "currentLiabilities": "Number in millions",
+      "netWorkingCapital": "Current Assets - Current Liabilities",
+      "ppe": "PP&E in millions",
+      "goodwill": "Goodwill in millions",
+      "intangibles": "Intangibles in millions",
+      "totalIC": "Sum of components",
+      "calculationShown": "Show: NWC $X + PP&E $Y + Goodwill $Z = IC $Total",
+      "alternativeMethod": "Also show: Equity + Debt - Excess Cash"
+    },
+    "roicCalculated": {
+      "percentage": "ROIC as percentage",
+      "calculation": "NOPAT / IC = X%",
+      "interpretation": "Assessment vs industry and cost of capital"
+    },
+    "dupontDecomposition": {
+      "profitMargin": "NOPAT / Revenue as %",
+      "capitalTurnover": "Revenue / IC as ratio",
+      "validation": "Margin × Turnover = ROIC (validate)",
+      "strategyInsight": "High margin (differentiation) or high turnover (cost leadership)?"
+    },
+    "valueCreation": {
+      "estimatedWACC": "Estimate 8-12% for this industry",
+      "spread": "ROIC - WACC",
+      "verdict": "Creating/destroying value?",
+      "context": "How does moat enable this ROIC?"
+    },
+    "historicalTrend": "Is ROIC improving or declining? (mention if you need more years)",
+    "dataQuality": "Confidence in the calculations (high/medium/low)"
+  },
+  
+  "moatAnalysis": {
+    "moatType": "Network effects / Scale / Intangibles / Switching costs / Cost advantages",
+    "moatStrength": "Wide / Narrow / None with justification",
+    "evidenceForMoat": "Specific financial evidence (margins, market position, pricing power)",
+    "moatDurability": "How long can this moat last? Risks?",
+    "linkToROIC": "How does moat create the ROIC observed?"
+  },
+  
+  "expectationsAnalysis": {
+    "impliedExpectations": "What growth/ROIC is market pricing in?",
+    "currentValuation": "P/E or EV/EBITDA if you can estimate",
+    "scenarioAnalysis": "Bull / Base / Bear cases with assumptions",
+    "probabilityWeighted": "Weight the scenarios"
+  },
+  
+  "probabilistic": {
+    "baseRates": "What % of companies in this industry sustain high ROIC?",
+    "skillVsLuck": "How much is replicable skill vs luck?",
+    "keyUncertainties": "Top 2-3 uncertainties"
+  },
+  
+  "management": {
+    "capitalAllocation": "Track record and quality",
+    "strategicThinking": "Evidence of long-term focus",
+    "overallAssessment": "Trust them with capital?"
+  },
+  
+  "conclusion": {
+    "investmentThesis": "3-5 sentence thesis",
+    "keyRisks": "Top 3 risks",
+    "whatWouldChange": "What would change your view?",
+    "recommendation": "Context-dependent recommendation"
+  }
+}
+
+CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -216,7 +308,7 @@ Format your response with clear headers and bullet points. Be specific and quant
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 8000,
         messages: [
           {
             role: 'user',
