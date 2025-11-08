@@ -2,14 +2,88 @@ import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import NodeCache from 'node-cache';
 
 dotenv.config();
+
+// Initialize cache with 1 hour TTL (3600 seconds)
+// Financial data doesn't change frequently, so caching is safe
+const cache = new NodeCache({
+  stdTTL: 3600, // 1 hour default TTL
+  checkperiod: 600, // Check for expired keys every 10 minutes
+  useClones: false // Don't clone objects (better performance)
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// Configure CORS with allowed origins
+const allowedOrigins = [
+  'http://localhost:5173', // Vite dev server
+  'http://localhost:3000', // Alternative dev port
+  process.env.FRONTEND_URL // Production frontend URL
+].filter(Boolean); // Remove undefined values
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
+
+// Rate limiting configuration
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 analysis requests per windowMs (more expensive)
+  message: 'Too many analysis requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
+// Cache middleware - checks cache before proceeding to handler
+const cacheMiddleware = (req, res, next) => {
+  const cacheKey = req.originalUrl || req.url;
+  const cachedData = cache.get(cacheKey);
+
+  if (cachedData) {
+    console.log(`Cache hit: ${cacheKey}`);
+    return res.json(cachedData);
+  }
+
+  // Store original res.json to intercept response
+  const originalJson = res.json.bind(res);
+  res.json = (data) => {
+    // Cache successful responses (status 200)
+    if (res.statusCode === 200) {
+      cache.set(cacheKey, data);
+      console.log(`Cached: ${cacheKey}`);
+    }
+    return originalJson(data);
+  };
+
+  next();
+};
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -21,7 +95,7 @@ app.get('/health', (req, res) => {
 });
 
 // Search for company ticker
-app.get('/api/av/search', async (req, res) => {
+app.get('/api/av/search', cacheMiddleware, async (req, res) => {
   const { query } = req.query;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -46,7 +120,7 @@ app.get('/api/av/search', async (req, res) => {
 });
 
 // Fetch company overview
-app.get('/api/av/overview/:symbol', async (req, res) => {
+app.get('/api/av/overview/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -75,7 +149,7 @@ app.get('/api/av/overview/:symbol', async (req, res) => {
 });
 
 // Fetch income statement
-app.get('/api/av/income-statement/:symbol', async (req, res) => {
+app.get('/api/av/income-statement/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -100,7 +174,7 @@ app.get('/api/av/income-statement/:symbol', async (req, res) => {
 });
 
 // Fetch balance sheet
-app.get('/api/av/balance-sheet/:symbol', async (req, res) => {
+app.get('/api/av/balance-sheet/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -125,7 +199,7 @@ app.get('/api/av/balance-sheet/:symbol', async (req, res) => {
 });
 
 // Fetch cash flow statement
-app.get('/api/av/cash-flow/:symbol', async (req, res) => {
+app.get('/api/av/cash-flow/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -149,8 +223,8 @@ app.get('/api/av/cash-flow/:symbol', async (req, res) => {
   }
 });
 
-// Analyze company using Anthropic API
-app.post('/api/analyze', async (req, res) => {
+// Analyze company using Anthropic API (with stricter rate limiting)
+app.post('/api/analyze', strictLimiter, async (req, res) => {
   const { companyData } = req.body;
   const apiKey = process.env.ANTHROPIC_API_KEY;
 

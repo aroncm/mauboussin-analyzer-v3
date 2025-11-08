@@ -42,6 +42,37 @@ const MauboussinAIAnalyzer = () => {
     }));
   };
 
+  // Retry helper function for API calls
+  const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+
+        // If rate limited, wait and retry
+        if (response.status === 429) {
+          const waitTime = Math.pow(2, i) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Rate limited, retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        return response;
+      } catch (error) {
+        lastError = error;
+        console.log(`Attempt ${i + 1} failed:`, error.message);
+
+        if (i < maxRetries - 1) {
+          const waitTime = Math.pow(2, i) * 1000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    throw lastError || new Error('Max retries exceeded');
+  };
+
   const analyzeCompany = async () => {
     if (!companyInput.trim()) {
       setError('Please enter a company name or ticker symbol');
@@ -64,14 +95,14 @@ const MauboussinAIAnalyzer = () => {
       
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
-          const searchResponse = await fetch(
+          const searchResponse = await fetchWithRetry(
             `${BACKEND_URL}/api/av/search?query=${encodeURIComponent(companyInput)}`
           );
-          
+
           if (!searchResponse.ok) {
             throw new Error('Failed to search for company. Please try again.');
           }
-          
+
           const searchData = await searchResponse.json();
           
           if (searchData && searchData.length > 0) {
@@ -85,75 +116,58 @@ const MauboussinAIAnalyzer = () => {
         }
       }
 
-      // Step 2: Fetch company profile
-      setLoadingStep(`📊 Fetching ${ticker} company profile...`);
-      const profileResponse = await fetch(`${BACKEND_URL}/api/av/overview/${ticker}`);
+      // Step 2-5: Fetch all financial data in parallel for better performance
+      setLoadingStep(`📊 Fetching financial data for ${ticker}...`);
 
+      const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse] = await Promise.all([
+        fetchWithRetry(`${BACKEND_URL}/api/av/overview/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/income-statement/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/balance-sheet/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/cash-flow/${ticker}`)
+      ]);
+
+      // Validate all responses
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch company profile. Check ticker symbol.');
       }
-
-      const profileData = await profileResponse.json();
-      
-      if (!profileData || profileData.length === 0) {
-        throw new Error(`No data found for ticker: ${ticker}`);
-      }
-
-      const profile = profileData[0];
-
-      // Step 3: Fetch Income Statement
-      setLoadingStep('📈 Fetching income statement from SEC filings...');
-      const incomeResponse = await fetch(
-        `${BACKEND_URL}/api/av/income-statement/${ticker}`
-      );
-
       if (!incomeResponse.ok) {
         throw new Error('Failed to fetch income statement');
       }
-
-      const incomeData = await incomeResponse.json();
-      
-      if (!incomeData || incomeData.length === 0) {
-        throw new Error('No income statement data available');
-      }
-
-      const income = incomeData[0];
-
-      // Step 4: Fetch Balance Sheet
-      setLoadingStep('💰 Fetching balance sheet from SEC filings...');
-      const balanceResponse = await fetch(
-        `${BACKEND_URL}/api/av/balance-sheet/${ticker}`
-      );
-
       if (!balanceResponse.ok) {
         throw new Error('Failed to fetch balance sheet');
       }
-
-      const balanceData = await balanceResponse.json();
-      
-      if (!balanceData || balanceData.length === 0) {
-        throw new Error('No balance sheet data available');
-      }
-
-      const balance = balanceData[0];
-
-      // Step 5: Fetch Cash Flow
-      setLoadingStep('💵 Fetching cash flow statement...');
-      const cashFlowResponse = await fetch(
-        `${BACKEND_URL}/api/av/cash-flow/${ticker}`
-      );
-
       if (!cashFlowResponse.ok) {
         throw new Error('Failed to fetch cash flow statement');
       }
 
-      const cashFlowData = await cashFlowResponse.json();
-      
+      // Parse all data in parallel
+      const [profileData, incomeData, balanceData, cashFlowData] = await Promise.all([
+        profileResponse.json(),
+        incomeResponse.json(),
+        balanceResponse.json(),
+        cashFlowResponse.json()
+      ]);
+
+      // Validate data
+      if (!profileData || profileData.length === 0) {
+        throw new Error(`No data found for ticker: ${ticker}`);
+      }
+      if (!incomeData || incomeData.length === 0) {
+        throw new Error('No income statement data available');
+      }
+      if (!balanceData || balanceData.length === 0) {
+        throw new Error('No balance sheet data available');
+      }
       if (!cashFlowData || cashFlowData.length === 0) {
         throw new Error('No cash flow data available');
       }
 
+      const profile = profileData[0];
+      const income = incomeData[0];
+      const balance = balanceData[0];
       const cashFlow = cashFlowData[0];
+
+      setLoadingStep('✓ Financial data fetched successfully');
 
       // Helper function to convert Alpha Vantage's "None" strings to 0
       const parseNumber = (value) => {
@@ -214,10 +228,10 @@ const MauboussinAIAnalyzer = () => {
         }
       };
 
-      // Step 7: Perform Mauboussin Analysis using Backend API (which calls Claude)
+      // Step 6: Perform Mauboussin Analysis using Backend API (which calls Claude)
       setLoadingStep('🧮 Calculating ROIC and applying Mauboussin framework...');
-      
-      const analysisResponse = await fetch(`${BACKEND_URL}/api/analyze`, {
+
+      const analysisResponse = await fetchWithRetry(`${BACKEND_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
