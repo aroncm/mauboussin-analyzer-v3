@@ -20,8 +20,33 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Fetch company overview from Alpha Vantage
-app.get('/api/company/:symbol', async (req, res) => {
+// Search for company ticker
+app.get('/api/av/search', async (req, res) => {
+  const { query } = req.query;
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Alpha Vantage API key not configured' });
+  }
+
+  try {
+    const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(query)}&apikey=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.Note) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    }
+
+    res.json(data.bestMatches || []);
+  } catch (error) {
+    console.error('Error searching company:', error);
+    res.status(500).json({ error: 'Failed to search company' });
+  }
+});
+
+// Fetch company overview
+app.get('/api/av/overview/:symbol', async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -42,15 +67,15 @@ app.get('/api/company/:symbol', async (req, res) => {
       return res.status(404).json({ error: 'Company not found' });
     }
 
-    res.json(data);
+    res.json([data]);
   } catch (error) {
     console.error('Error fetching company data:', error);
     res.status(500).json({ error: 'Failed to fetch company data' });
   }
 });
 
-// Fetch income statement from Alpha Vantage
-app.get('/api/income-statement/:symbol', async (req, res) => {
+// Fetch income statement
+app.get('/api/av/income-statement/:symbol', async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -67,15 +92,15 @@ app.get('/api/income-statement/:symbol', async (req, res) => {
       return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
     }
 
-    res.json(data);
+    res.json(data.annualReports || []);
   } catch (error) {
     console.error('Error fetching income statement:', error);
     res.status(500).json({ error: 'Failed to fetch income statement' });
   }
 });
 
-// Fetch balance sheet from Alpha Vantage
-app.get('/api/balance-sheet/:symbol', async (req, res) => {
+// Fetch balance sheet
+app.get('/api/av/balance-sheet/:symbol', async (req, res) => {
   const { symbol } = req.params;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -92,14 +117,39 @@ app.get('/api/balance-sheet/:symbol', async (req, res) => {
       return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
     }
 
-    res.json(data);
+    res.json(data.annualReports || []);
   } catch (error) {
     console.error('Error fetching balance sheet:', error);
     res.status(500).json({ error: 'Failed to fetch balance sheet' });
   }
 });
 
-// NEW: Analyze company using Anthropic API
+// Fetch cash flow statement
+app.get('/api/av/cash-flow/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Alpha Vantage API key not configured' });
+  }
+
+  try {
+    const url = `https://www.alphavantage.co/query?function=CASH_FLOW&symbol=${symbol}&apikey=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.Note) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    }
+
+    res.json(data.annualReports || []);
+  } catch (error) {
+    console.error('Error fetching cash flow statement:', error);
+    res.status(500).json({ error: 'Failed to fetch cash flow statement' });
+  }
+});
+
+// Analyze company using Anthropic API
 app.post('/api/analyze', async (req, res) => {
   const { companyData } = req.body;
   const apiKey = process.env.ANTHROPIC_API_KEY;
