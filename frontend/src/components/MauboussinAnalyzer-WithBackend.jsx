@@ -155,52 +155,62 @@ const MauboussinAIAnalyzer = () => {
 
       const cashFlow = cashFlowData[0];
 
+      // Helper function to convert Alpha Vantage's "None" strings to 0
+      const parseNumber = (value) => {
+        if (value === "None" || value === null || value === undefined || value === "") {
+          return 0;
+        }
+        return parseFloat(value) || 0;
+      };
+
       // Step 6: Prepare financial data for analysis
       const financialData = {
-        companyName: profile.companyName,
+        companyName: profile.Name,
         ticker: ticker,
-        industry: profile.industry || profile.sector,
-        description: profile.description,
-        fiscalPeriod: income.calendarYear,
-        currency: profile.currency || 'USD',
+        industry: profile.Industry || profile.Sector,
+        description: profile.Description,
+        fiscalPeriod: income.fiscalDateEnding,
+        currency: profile.Currency || 'USD',
         
         incomeStatement: {
-          revenue: income.revenue,
-          costOfRevenue: income.costOfRevenue,
-          grossProfit: income.grossProfit,
-          operatingExpenses: income.operatingExpenses,
-          operatingIncome: income.operatingIncome,
-          ebitda: income.ebitda,
-          ebit: income.ebitda - (income.depreciationAndAmortization || 0),
-          interestExpense: income.interestExpense,
-          taxExpense: income.incomeTaxExpense,
-          netIncome: income.netIncome,
-          taxRate: income.incomeBeforeTax !== 0 ? income.incomeTaxExpense / income.incomeBeforeTax : 0.21
+          revenue: parseNumber(income.totalRevenue),
+          costOfRevenue: parseNumber(income.costOfRevenue),
+          grossProfit: parseNumber(income.grossProfit),
+          operatingExpenses: parseNumber(income.operatingExpenses),
+          operatingIncome: parseNumber(income.operatingIncome),
+          ebitda: parseNumber(income.ebitda),
+          ebit: parseNumber(income.ebit),
+          interestExpense: parseNumber(income.interestExpense),
+          taxExpense: parseNumber(income.incomeTaxExpense),
+          netIncome: parseNumber(income.netIncome),
+          taxRate: parseNumber(income.incomeBeforeTax) !== 0 
+            ? parseNumber(income.incomeTaxExpense) / parseNumber(income.incomeBeforeTax) 
+            : 0.21
         },
         
         balanceSheet: {
-          totalAssets: balance.totalAssets,
-          currentAssets: balance.totalCurrentAssets,
-          cash: balance.cashAndCashEquivalents,
-          accountsReceivable: balance.netReceivables,
-          inventory: balance.inventory,
-          ppe: balance.propertyPlantEquipmentNet,
-          goodwill: balance.goodwill || 0,
-          intangibleAssets: balance.intangibleAssets || 0,
+          totalAssets: parseNumber(balance.totalAssets),
+          currentAssets: parseNumber(balance.totalCurrentAssets),
+          cash: parseNumber(balance.cashAndCashEquivalentsAtCarryingValue),
+          accountsReceivable: parseNumber(balance.currentNetReceivables),
+          inventory: parseNumber(balance.inventory),
+          ppe: parseNumber(balance.propertyPlantEquipment),
+          goodwill: parseNumber(balance.goodwill),
+          intangibleAssets: parseNumber(balance.intangibleAssets),
           
-          totalLiabilities: balance.totalLiabilities,
-          currentLiabilities: balance.totalCurrentLiabilities,
-          accountsPayable: balance.accountPayables,
-          shortTermDebt: balance.shortTermDebt || 0,
-          longTermDebt: balance.longTermDebt || 0,
+          totalLiabilities: parseNumber(balance.totalLiabilities),
+          currentLiabilities: parseNumber(balance.totalCurrentLiabilities),
+          accountsPayable: parseNumber(balance.currentAccountsPayable),
+          shortTermDebt: parseNumber(balance.shortTermDebt),
+          longTermDebt: parseNumber(balance.shortLongTermDebtTotal) - parseNumber(balance.shortTermDebt),
           
-          totalEquity: balance.totalStockholdersEquity
+          totalEquity: parseNumber(balance.totalShareholderEquity)
         },
         
         cashFlow: {
-          operatingCashFlow: cashFlow.operatingCashFlow,
-          capitalExpenditures: Math.abs(cashFlow.capitalExpenditure || 0),
-          freeCashFlow: cashFlow.freeCashFlow
+          operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
+          capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
+          freeCashFlow: parseNumber(cashFlow.operatingCashflow) - Math.abs(parseNumber(cashFlow.capitalExpenditures))
         }
       };
 
