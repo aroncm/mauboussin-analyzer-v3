@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+import { ProfilingIntegration } from '@sentry/profiling-node';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
@@ -7,6 +9,19 @@ import NodeCache from 'node-cache';
 import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
+
+// Initialize Sentry for error monitoring (production only)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+      new ProfilingIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+    environment: process.env.NODE_ENV || 'development',
+  });
+}
 
 // Initialize cache with 1 hour TTL (3600 seconds)
 // Financial data doesn't change frequently, so caching is safe
@@ -595,8 +610,20 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`;
   }
 });
 
+// Sentry error handler (must be before any other error middleware)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
+
+// Sentry error handler (must be after all controllers)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`Alpha Vantage API key configured: ${!!process.env.ALPHA_VANTAGE_API_KEY}`);
   console.log(`Anthropic API key configured: ${!!process.env.ANTHROPIC_API_KEY}`);
+  console.log(`Sentry monitoring: ${process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN ? 'enabled' : 'disabled'}`);
 });
