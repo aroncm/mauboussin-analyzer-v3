@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
+import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
 
@@ -223,6 +224,73 @@ app.get('/api/av/cash-flow/:symbol', cacheMiddleware, async (req, res) => {
   }
 });
 
+// Fetch market data from Yahoo Finance (market cap, beta, etc.)
+app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
+  const { symbol } = req.params;
+
+  try {
+    const quote = await yahooFinance.quote(symbol);
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Symbol not found in Yahoo Finance' });
+    }
+
+    // Extract relevant data
+    const marketData = {
+      marketCap: quote.marketCap,
+      enterpriseValue: quote.enterpriseValue,
+      trailingPE: quote.trailingPE,
+      forwardPE: quote.forwardPE,
+      priceToBook: quote.priceToBook,
+      beta: quote.beta,
+      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+      sharesOutstanding: quote.sharesOutstanding,
+      floatShares: quote.floatShares,
+      averageVolume: quote.averageVolume,
+      currentPrice: quote.regularMarketPrice,
+      currency: quote.currency
+    };
+
+    res.json(marketData);
+  } catch (error) {
+    console.error('Error fetching Yahoo Finance data:', error);
+    res.status(500).json({ error: 'Failed to fetch market data from Yahoo Finance' });
+  }
+});
+
+// Fetch earnings call transcript (using financial modeling prep or similar)
+app.get('/api/earnings-transcript/:symbol', cacheMiddleware, async (req, res) => {
+  const { symbol } = req.params;
+
+  try {
+    // For now, we'll use Alpha Vantage earnings endpoint
+    // In production, you might want to use a dedicated transcript service
+    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Alpha Vantage API key not configured' });
+    }
+
+    const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.Note) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    }
+
+    // Return quarterly and annual earnings
+    res.json({
+      quarterlyEarnings: data.quarterlyEarnings || [],
+      annualEarnings: data.annualEarnings || []
+    });
+  } catch (error) {
+    console.error('Error fetching earnings data:', error);
+    res.status(500).json({ error: 'Failed to fetch earnings data' });
+  }
+});
+
 // Analyze company using Anthropic API (with stricter rate limiting)
 app.post('/api/analyze', strictLimiter, async (req, res) => {
   const { companyData } = req.body;
@@ -237,7 +305,55 @@ app.post('/api/analyze', strictLimiter, async (req, res) => {
   }
 
   try {
-    const prompt = `You are a strategic analyst using Michael Mauboussin's investment frameworks.
+    // Calculate WACC using CAPM if we have beta
+    let waccSection = '';
+    if (companyData.marketData && companyData.marketData.beta) {
+      const riskFreeRate = 0.045; // Current 10-year Treasury yield ~4.5%
+      const marketRiskPremium = 0.08; // Historical equity risk premium ~8%
+      const beta = companyData.marketData.beta;
+      const costOfEquity = riskFreeRate + (beta * marketRiskPremium);
+
+      waccSection = `
+CALCULATED COST OF EQUITY (CAPM):
+Risk-Free Rate: ${(riskFreeRate * 100).toFixed(2)}%
+Beta: ${beta.toFixed(2)}
+Market Risk Premium: ${(marketRiskPremium * 100).toFixed(1)}%
+Cost of Equity = ${(riskFreeRate * 100).toFixed(2)}% + (${beta.toFixed(2)} × ${(marketRiskPremium * 100).toFixed(1)}%) = ${(costOfEquity * 100).toFixed(2)}%
+
+Note: Use this calculated cost of equity in your WACC estimation, adjusting for capital structure.`;
+    }
+
+    // Add market data section if available
+    let marketDataSection = '';
+    if (companyData.marketData) {
+      marketDataSection = `
+MARKET DATA (Yahoo Finance):
+Market Cap: $${(companyData.marketData.marketCap / 1e9).toFixed(2)}B
+Enterprise Value: $${(companyData.marketData.enterpriseValue / 1e9).toFixed(2)}B
+Current Price: $${companyData.marketData.currentPrice?.toFixed(2) || 'N/A'}
+Trailing P/E: ${companyData.marketData.trailingPE?.toFixed(1) || 'N/A'}
+Forward P/E: ${companyData.marketData.forwardPE?.toFixed(1) || 'N/A'}
+Price-to-Book: ${companyData.marketData.priceToBook?.toFixed(2) || 'N/A'}
+Beta: ${companyData.marketData.beta?.toFixed(2) || 'N/A'}
+Shares Outstanding: ${(companyData.marketData.sharesOutstanding / 1e6).toFixed(1)}M
+${waccSection}`;
+    }
+
+    // Add earnings trend section if available
+    let earningsSection = '';
+    if (companyData.earningsData && companyData.earningsData.quarterlyEarnings) {
+      const quarters = companyData.earningsData.quarterlyEarnings.slice(0, 4);
+      earningsSection = `
+RECENT EARNINGS TREND (Last 4 Quarters):
+${quarters.map((q, i) => `Q${4-i} ${q.fiscalDateEnding}: EPS $${q.reportedEPS || 'N/A'} (Est: $${q.estimatedEPS || 'N/A'}) - Surprise: ${q.surprise || 'N/A'}%`).join('\n')}
+
+Use this earnings trend for qualitative analysis of:
+- Earnings quality and consistency
+- Management's ability to meet/beat expectations
+- Improving or declining business trajectory`;
+    }
+
+    const prompt = `You are a strategic analyst using Michael Mauboussin's investment frameworks, specifically "Measuring the Moat" and competitive analysis principles.
 
 === FINANCIAL DATA FROM SEC FILING (via Alpha Vantage API) ===
 
@@ -245,6 +361,8 @@ Company: ${companyData.companyName} (${companyData.ticker})
 Industry: ${companyData.industry}
 Fiscal Year: ${companyData.fiscalPeriod}
 Currency: ${companyData.currency}
+${marketDataSection}
+${earningsSection}
 
 INCOME STATEMENT:
 Revenue: ${(companyData.incomeStatement.revenue / 1e6).toFixed(1)}M
@@ -281,13 +399,64 @@ Operating Cash Flow: ${(companyData.cashFlow.operatingCashFlow / 1e6).toFixed(1)
 Capital Expenditures: ${(companyData.cashFlow.capitalExpenditures / 1e6).toFixed(1)}M
 Free Cash Flow: ${(companyData.cashFlow.freeCashFlow / 1e6).toFixed(1)}M
 
+${companyData.historicalData ? `
+HISTORICAL DATA (${companyData.historicalData.yearsAvailable} years available):
+
+Revenue Trend:
+${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: $${(yr.revenue / 1e6).toFixed(1)}M (Growth: ${yr.revenue > 0 ? 'calculated' : 'N/A'})`).join('\n')}
+
+Operating Income Trend:
+${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: $${(yr.operatingIncome / 1e6).toFixed(1)}M (Margin: ${yr.revenue > 0 ? ((yr.operatingIncome / yr.revenue) * 100).toFixed(1) + '%' : 'N/A'})`).join('\n')}
+
+Free Cash Flow Trend:
+${companyData.historicalData.cashFlows.map(yr => `  ${yr.fiscalYear}: $${(yr.freeCashFlow / 1e6).toFixed(1)}M`).join('\n')}
+
+Gross Margin Trend:
+${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: ${(yr.grossMargin * 100).toFixed(1)}%`).join('\n')}
+
+Use this historical data to:
+- Calculate ROIC for multiple years and identify trends
+- Assess whether competitive advantages are strengthening or weakening
+- Evaluate earnings quality and consistency
+- Determine if growth is profitable (incremental ROIC analysis)
+` : ''}
+
 === YOUR TASK ===
 
-Perform a complete Mauboussin competitive analysis. Calculate ROIC precisely using the data above.
+Perform a complete Mauboussin competitive analysis using the "Measuring the Moat" framework. Calculate ROIC precisely using the data above.
 
-CRITICAL: Show all mathematical steps clearly. Use the actual numbers provided.
+KEY FRAMEWORKS TO APPLY:
 
-Your response MUST be valid JSON in this EXACT format (no additional text, no markdown, no code blocks):
+1. **MEASURING THE MOAT** (Mauboussin):
+   - Assess the DURABILITY and STRENGTH of competitive advantages
+   - Look for evidence of pricing power, customer captivity, and market share stability
+   - Analyze whether advantages are based on: supply advantages (economies of scale, network effects) or demand advantages (brand, habit, search costs)
+   - Evaluate whether the moat is WIDENING, STABLE, or NARROWING
+   - Connect moat strength directly to sustained ROIC > WACC
+
+2. **ROIC ANALYSIS**:
+   - Calculate ROIC with precision, showing all steps
+   - Use DuPont decomposition to understand drivers (margin vs turnover)
+   - Compare ROIC to calculated WACC (use CAPM if beta provided)
+   - Assess value creation: ROIC - WACC = Economic Profit spread
+
+3. **EXPECTATIONS INVESTING**:
+   - Reverse engineer what growth and ROIC the current valuation implies
+   - Build scenarios: What needs to go RIGHT (bull), WRONG (bear), or STAY THE COURSE (base)
+   - Probability-weight outcomes
+
+4. **EARNINGS QUALITY** (if quarterly data provided):
+   - Consistency of beat/miss patterns
+   - Improving or deteriorating trajectory
+   - Management credibility
+
+CRITICAL REQUIREMENTS:
+- Show all mathematical steps clearly using actual numbers provided
+- Use the calculated CAPM cost of equity if beta is provided
+- Base moat assessment on QUANTITATIVE evidence (margins, ROIC trends, market share)
+- Return ONLY valid JSON with no markdown or code blocks
+
+Your response MUST be valid JSON in this EXACT format:
 
 {
   "companyName": "${companyData.companyName}",
@@ -327,28 +496,43 @@ Your response MUST be valid JSON in this EXACT format (no additional text, no ma
       "strategyInsight": "High margin (differentiation) or high turnover (cost leadership)?"
     },
     "valueCreation": {
-      "estimatedWACC": "Estimate 8-12% for this industry",
-      "spread": "ROIC - WACC",
-      "verdict": "Creating/destroying value?",
+      "calculatedWACC": "Use CAPM cost of equity if provided, adjust for debt. Show calculation.",
+      "spread": "ROIC - WACC in percentage points",
+      "verdict": "Creating/destroying value? Quantify economic profit if possible.",
       "context": "How does moat enable this ROIC?"
     },
-    "historicalTrend": "Is ROIC improving or declining? (mention if you need more years)",
+    "historicalTrend": "Calculate ROIC for all available years. Is it improving, stable, or declining? What does this say about moat strength?",
+    "incrementalROIC": "If multi-year data available: Are new investments generating good returns? (Change in NOPAT / Change in IC)",
     "dataQuality": "Confidence in the calculations (high/medium/low)"
   },
   
   "moatAnalysis": {
-    "moatType": "Network effects / Scale / Intangibles / Switching costs / Cost advantages",
-    "moatStrength": "Wide / Narrow / None with justification",
-    "evidenceForMoat": "Specific financial evidence (margins, market position, pricing power)",
-    "moatDurability": "How long can this moat last? Risks?",
-    "linkToROIC": "How does moat create the ROIC observed?"
+    "moatType": "Primary source: Network effects / Scale economies / Intangible assets / Switching costs / Cost advantages",
+    "moatStrength": "Wide / Narrow / None - be rigorous with justification",
+    "supplyOrDemandAdvantage": "Is this a supply-side (scale, network) or demand-side (brand, habit) advantage?",
+    "evidenceForMoat": "QUANTITATIVE evidence: gross margins vs peers, customer retention rates, market share trends, pricing power metrics",
+    "moatDurability": "Is the moat WIDENING, STABLE, or NARROWING? What threatens it?",
+    "linkToROIC": "Specific mechanism: how does this moat translate to sustained high ROIC?",
+    "measurability": "How easy is it to measure this moat? High/Medium/Low"
+  },
+
+  "earningsQuality": {
+    "trend": "Improving / Stable / Declining based on quarterly data",
+    "consistency": "Beat/miss pattern - is management credible?",
+    "qualitativeSignals": "Any red or green flags from recent earnings?",
+    "applicableIfDataProvided": "Only complete this if quarterly earnings data was provided"
   },
   
   "expectationsAnalysis": {
-    "impliedExpectations": "What growth/ROIC is market pricing in?",
-    "currentValuation": "P/E or EV/EBITDA if you can estimate",
-    "scenarioAnalysis": "Bull / Base / Bear cases with assumptions",
-    "probabilityWeighted": "Weight the scenarios"
+    "impliedExpectations": "What growth rate and ROIC is the current valuation pricing in? Work backwards from P/E or EV/EBITDA.",
+    "currentValuation": "Use provided P/E, Price-to-Book, or calculate EV/EBITDA",
+    "scenarioAnalysis": {
+      "bull": "Optimistic case: assumptions and probability",
+      "base": "Most likely case: assumptions and probability",
+      "bear": "Pessimistic case: assumptions and probability"
+    },
+    "probabilityWeighted": "Expected value across scenarios",
+    "marketView": "Is the market too optimistic, pessimistic, or about right?"
   },
   
   "probabilistic": {

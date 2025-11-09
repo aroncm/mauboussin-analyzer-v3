@@ -116,14 +116,16 @@ const MauboussinAIAnalyzer = () => {
         }
       }
 
-      // Step 2-5: Fetch all financial data in parallel for better performance
+      // Step 2-6: Fetch all financial data in parallel for better performance
       setLoadingStep(`📊 Fetching financial data for ${ticker}...`);
 
-      const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse] = await Promise.all([
+      const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse, yahooResponse, earningsResponse] = await Promise.all([
         fetchWithRetry(`${BACKEND_URL}/api/av/overview/${ticker}`),
         fetchWithRetry(`${BACKEND_URL}/api/av/income-statement/${ticker}`),
         fetchWithRetry(`${BACKEND_URL}/api/av/balance-sheet/${ticker}`),
-        fetchWithRetry(`${BACKEND_URL}/api/av/cash-flow/${ticker}`)
+        fetchWithRetry(`${BACKEND_URL}/api/av/cash-flow/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/yf/quote/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/earnings-transcript/${ticker}`)
       ]);
 
       // Validate all responses
@@ -139,13 +141,18 @@ const MauboussinAIAnalyzer = () => {
       if (!cashFlowResponse.ok) {
         throw new Error('Failed to fetch cash flow statement');
       }
+      // Yahoo Finance and earnings are optional - don't fail if they error
+      const yahooOk = yahooResponse.ok;
+      const earningsOk = earningsResponse.ok;
 
       // Parse all data in parallel
-      const [profileData, incomeData, balanceData, cashFlowData] = await Promise.all([
+      const [profileData, incomeData, balanceData, cashFlowData, yahooData, earningsData] = await Promise.all([
         profileResponse.json(),
         incomeResponse.json(),
         balanceResponse.json(),
-        cashFlowResponse.json()
+        cashFlowResponse.json(),
+        yahooOk ? yahooResponse.json() : Promise.resolve(null),
+        earningsOk ? earningsResponse.json() : Promise.resolve(null)
       ]);
 
       // Validate data
@@ -162,10 +169,16 @@ const MauboussinAIAnalyzer = () => {
         throw new Error('No cash flow data available');
       }
 
+      // Get current year (most recent) and historical data (up to 5 years)
       const profile = profileData[0];
       const income = incomeData[0];
       const balance = balanceData[0];
       const cashFlow = cashFlowData[0];
+
+      // Get up to 5 years of historical data for trend analysis
+      const historicalIncome = incomeData.slice(0, Math.min(5, incomeData.length));
+      const historicalBalance = balanceData.slice(0, Math.min(5, balanceData.length));
+      const historicalCashFlow = cashFlowData.slice(0, Math.min(5, cashFlowData.length));
 
       setLoadingStep('✓ Financial data fetched successfully');
 
@@ -185,7 +198,25 @@ const MauboussinAIAnalyzer = () => {
         description: profile.Description,
         fiscalPeriod: income.fiscalDateEnding,
         currency: profile.Currency || 'USD',
-        
+
+        // Market data from Yahoo Finance
+        marketData: yahooData ? {
+          marketCap: yahooData.marketCap,
+          enterpriseValue: yahooData.enterpriseValue,
+          beta: yahooData.beta,
+          trailingPE: yahooData.trailingPE,
+          forwardPE: yahooData.forwardPE,
+          priceToBook: yahooData.priceToBook,
+          sharesOutstanding: yahooData.sharesOutstanding,
+          currentPrice: yahooData.currentPrice
+        } : null,
+
+        // Recent earnings data for qualitative analysis
+        earningsData: earningsData ? {
+          quarterlyEarnings: earningsData.quarterlyEarnings?.slice(0, 4) || [], // Last 4 quarters
+          annualEarnings: earningsData.annualEarnings?.slice(0, 3) || [] // Last 3 years
+        } : null,
+
         incomeStatement: {
           revenue: parseNumber(income.totalRevenue),
           costOfRevenue: parseNumber(income.costOfRevenue),
@@ -225,6 +256,32 @@ const MauboussinAIAnalyzer = () => {
           operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
           capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
           freeCashFlow: parseNumber(cashFlow.operatingCashflow) - Math.abs(parseNumber(cashFlow.capitalExpenditures))
+        },
+
+        // Historical data for trend analysis (up to 5 years)
+        historicalData: {
+          yearsAvailable: historicalIncome.length,
+          incomeStatements: historicalIncome.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            revenue: parseNumber(yr.totalRevenue),
+            operatingIncome: parseNumber(yr.operatingIncome),
+            ebit: parseNumber(yr.ebit),
+            netIncome: parseNumber(yr.netIncome),
+            grossMargin: parseNumber(yr.grossProfit) / parseNumber(yr.totalRevenue)
+          })),
+          balanceSheets: historicalBalance.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            totalAssets: parseNumber(yr.totalAssets),
+            totalEquity: parseNumber(yr.totalShareholderEquity),
+            totalDebt: parseNumber(yr.shortLongTermDebtTotal),
+            ppe: parseNumber(yr.propertyPlantEquipment)
+          })),
+          cashFlows: historicalCashFlow.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            operatingCashFlow: parseNumber(yr.operatingCashflow),
+            capex: Math.abs(parseNumber(yr.capitalExpenditures)),
+            freeCashFlow: parseNumber(yr.operatingCashflow) - Math.abs(parseNumber(yr.capitalExpenditures))
+          }))
         }
       };
 
