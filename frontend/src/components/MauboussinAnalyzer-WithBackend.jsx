@@ -42,6 +42,37 @@ const MauboussinAIAnalyzer = () => {
     }));
   };
 
+  // Retry helper function for API calls
+  const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+
+        // If rate limited, wait and retry
+        if (response.status === 429) {
+          const waitTime = Math.pow(2, i) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Rate limited, retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        return response;
+      } catch (error) {
+        lastError = error;
+        console.log(`Attempt ${i + 1} failed:`, error.message);
+
+        if (i < maxRetries - 1) {
+          const waitTime = Math.pow(2, i) * 1000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    throw lastError || new Error('Max retries exceeded');
+  };
+
   const analyzeCompany = async () => {
     if (!companyInput.trim()) {
       setError('Please enter a company name or ticker symbol');
@@ -64,14 +95,14 @@ const MauboussinAIAnalyzer = () => {
       
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
-          const searchResponse = await fetch(
+          const searchResponse = await fetchWithRetry(
             `${BACKEND_URL}/api/av/search?query=${encodeURIComponent(companyInput)}`
           );
-          
+
           if (!searchResponse.ok) {
             throw new Error('Failed to search for company. Please try again.');
           }
-          
+
           const searchData = await searchResponse.json();
           
           if (searchData && searchData.length > 0) {
@@ -85,75 +116,71 @@ const MauboussinAIAnalyzer = () => {
         }
       }
 
-      // Step 2: Fetch company profile
-      setLoadingStep(`📊 Fetching ${ticker} company profile...`);
-      const profileResponse = await fetch(`${BACKEND_URL}/api/av/overview/${ticker}`);
+      // Step 2-6: Fetch all financial data in parallel for better performance
+      setLoadingStep(`📊 Fetching financial data for ${ticker}...`);
 
+      const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse, yahooResponse, earningsResponse] = await Promise.all([
+        fetchWithRetry(`${BACKEND_URL}/api/av/overview/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/income-statement/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/balance-sheet/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/cash-flow/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/yf/quote/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/earnings-transcript/${ticker}`)
+      ]);
+
+      // Validate all responses
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch company profile. Check ticker symbol.');
       }
-
-      const profileData = await profileResponse.json();
-      
-      if (!profileData || profileData.length === 0) {
-        throw new Error(`No data found for ticker: ${ticker}`);
-      }
-
-      const profile = profileData[0];
-
-      // Step 3: Fetch Income Statement
-      setLoadingStep('📈 Fetching income statement from SEC filings...');
-      const incomeResponse = await fetch(
-        `${BACKEND_URL}/api/av/income-statement/${ticker}`
-      );
-
       if (!incomeResponse.ok) {
         throw new Error('Failed to fetch income statement');
       }
-
-      const incomeData = await incomeResponse.json();
-      
-      if (!incomeData || incomeData.length === 0) {
-        throw new Error('No income statement data available');
-      }
-
-      const income = incomeData[0];
-
-      // Step 4: Fetch Balance Sheet
-      setLoadingStep('💰 Fetching balance sheet from SEC filings...');
-      const balanceResponse = await fetch(
-        `${BACKEND_URL}/api/av/balance-sheet/${ticker}`
-      );
-
       if (!balanceResponse.ok) {
         throw new Error('Failed to fetch balance sheet');
       }
-
-      const balanceData = await balanceResponse.json();
-      
-      if (!balanceData || balanceData.length === 0) {
-        throw new Error('No balance sheet data available');
-      }
-
-      const balance = balanceData[0];
-
-      // Step 5: Fetch Cash Flow
-      setLoadingStep('💵 Fetching cash flow statement...');
-      const cashFlowResponse = await fetch(
-        `${BACKEND_URL}/api/av/cash-flow/${ticker}`
-      );
-
       if (!cashFlowResponse.ok) {
         throw new Error('Failed to fetch cash flow statement');
       }
+      // Yahoo Finance and earnings are optional - don't fail if they error
+      const yahooOk = yahooResponse.ok;
+      const earningsOk = earningsResponse.ok;
 
-      const cashFlowData = await cashFlowResponse.json();
-      
+      // Parse all data in parallel
+      const [profileData, incomeData, balanceData, cashFlowData, yahooData, earningsData] = await Promise.all([
+        profileResponse.json(),
+        incomeResponse.json(),
+        balanceResponse.json(),
+        cashFlowResponse.json(),
+        yahooOk ? yahooResponse.json() : Promise.resolve(null),
+        earningsOk ? earningsResponse.json() : Promise.resolve(null)
+      ]);
+
+      // Validate data
+      if (!profileData || profileData.length === 0) {
+        throw new Error(`No data found for ticker: ${ticker}`);
+      }
+      if (!incomeData || incomeData.length === 0) {
+        throw new Error('No income statement data available');
+      }
+      if (!balanceData || balanceData.length === 0) {
+        throw new Error('No balance sheet data available');
+      }
       if (!cashFlowData || cashFlowData.length === 0) {
         throw new Error('No cash flow data available');
       }
 
+      // Get current year (most recent) and historical data (up to 5 years)
+      const profile = profileData[0];
+      const income = incomeData[0];
+      const balance = balanceData[0];
       const cashFlow = cashFlowData[0];
+
+      // Get up to 5 years of historical data for trend analysis
+      const historicalIncome = incomeData.slice(0, Math.min(5, incomeData.length));
+      const historicalBalance = balanceData.slice(0, Math.min(5, balanceData.length));
+      const historicalCashFlow = cashFlowData.slice(0, Math.min(5, cashFlowData.length));
+
+      setLoadingStep('✓ Financial data fetched successfully');
 
       // Helper function to convert Alpha Vantage's "None" strings to 0
       const parseNumber = (value) => {
@@ -171,7 +198,25 @@ const MauboussinAIAnalyzer = () => {
         description: profile.Description,
         fiscalPeriod: income.fiscalDateEnding,
         currency: profile.Currency || 'USD',
-        
+
+        // Market data from Yahoo Finance
+        marketData: yahooData ? {
+          marketCap: yahooData.marketCap,
+          enterpriseValue: yahooData.enterpriseValue,
+          beta: yahooData.beta,
+          trailingPE: yahooData.trailingPE,
+          forwardPE: yahooData.forwardPE,
+          priceToBook: yahooData.priceToBook,
+          sharesOutstanding: yahooData.sharesOutstanding,
+          currentPrice: yahooData.currentPrice
+        } : null,
+
+        // Recent earnings data for qualitative analysis
+        earningsData: earningsData ? {
+          quarterlyEarnings: earningsData.quarterlyEarnings?.slice(0, 4) || [], // Last 4 quarters
+          annualEarnings: earningsData.annualEarnings?.slice(0, 3) || [] // Last 3 years
+        } : null,
+
         incomeStatement: {
           revenue: parseNumber(income.totalRevenue),
           costOfRevenue: parseNumber(income.costOfRevenue),
@@ -211,13 +256,39 @@ const MauboussinAIAnalyzer = () => {
           operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
           capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
           freeCashFlow: parseNumber(cashFlow.operatingCashflow) - Math.abs(parseNumber(cashFlow.capitalExpenditures))
+        },
+
+        // Historical data for trend analysis (up to 5 years)
+        historicalData: {
+          yearsAvailable: historicalIncome.length,
+          incomeStatements: historicalIncome.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            revenue: parseNumber(yr.totalRevenue),
+            operatingIncome: parseNumber(yr.operatingIncome),
+            ebit: parseNumber(yr.ebit),
+            netIncome: parseNumber(yr.netIncome),
+            grossMargin: parseNumber(yr.grossProfit) / parseNumber(yr.totalRevenue)
+          })),
+          balanceSheets: historicalBalance.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            totalAssets: parseNumber(yr.totalAssets),
+            totalEquity: parseNumber(yr.totalShareholderEquity),
+            totalDebt: parseNumber(yr.shortLongTermDebtTotal),
+            ppe: parseNumber(yr.propertyPlantEquipment)
+          })),
+          cashFlows: historicalCashFlow.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            operatingCashFlow: parseNumber(yr.operatingCashflow),
+            capex: Math.abs(parseNumber(yr.capitalExpenditures)),
+            freeCashFlow: parseNumber(yr.operatingCashflow) - Math.abs(parseNumber(yr.capitalExpenditures))
+          }))
         }
       };
 
-      // Step 7: Perform Mauboussin Analysis using Backend API (which calls Claude)
+      // Step 6: Perform Mauboussin Analysis using Backend API (which calls Claude)
       setLoadingStep('🧮 Calculating ROIC and applying Mauboussin framework...');
-      
-      const analysisResponse = await fetch(`${BACKEND_URL}/api/analyze`, {
+
+      const analysisResponse = await fetchWithRetry(`${BACKEND_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -421,30 +492,22 @@ Generated: ${new Date().toLocaleString()}
           <p className="text-sm text-gray-500">Powered by Alpha Vantage API + Claude Analysis</p>
         </div>
 
-        {/* Backend Status */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Error notification only when backend is down */}
+        {!backendConnected && (
+          <div className="bg-red-50 rounded-2xl shadow-lg p-6 mb-8 border-2 border-red-200">
             <div className="flex items-center gap-3">
-              <Server size={24} className={backendConnected ? 'text-green-600' : 'text-red-600'} />
+              <Server size={24} className="text-red-600" />
               <div>
-                <span className={`font-medium ${backendConnected ? 'text-green-700' : 'text-red-700'}`}>
-                  Backend Server: {backendConnected ? 'Connected ✅' : 'Not Connected ❌'}
+                <span className="font-medium text-red-700">
+                  Unable to connect to analysis server
                 </span>
-                {!backendConnected && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Check if your backend is running
-                  </p>
-                )}
+                <p className="text-sm text-gray-600 mt-1">
+                  Please try again later or contact support if the issue persists
+                </p>
               </div>
             </div>
-            <button
-              onClick={checkBackendConnection}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-            >
-              Retry Connection
-            </button>
           </div>
-        </div>
+        )}
 
         {/* Search Box */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
@@ -750,15 +813,7 @@ Generated: ${new Date().toLocaleString()}
         )}
 
         {/* Footer */}
-        {!isAnalyzing && !analysis && (
-          <div className="text-center mt-12 space-y-6">
-            <blockquote className="text-gray-600 italic text-lg">
-              "The big money is not in the buying or selling, but in the waiting."
-              <br />
-              <span className="text-gray-500 text-base">— Charlie Munger</span>
-            </blockquote>
-          </div>
-        )}
+        {/* Placeholder removed - cleaner UI */}
       </div>
 
       {/* Export Modal */}
