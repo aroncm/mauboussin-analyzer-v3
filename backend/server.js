@@ -5,9 +5,12 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
-import yf from 'yahoo-finance2';
+import { YahooFinance } from 'yahoo-finance2';
 
 dotenv.config();
+
+// Initialize Yahoo Finance
+const yahooFinance = new YahooFinance();
 
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -248,7 +251,7 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
 
   try {
     // Use quoteSummary with specific modules for more reliable data fetching
-    const result = await yf.quoteSummary(symbol, {
+    const result = await yahooFinance.quoteSummary(symbol, {
       modules: ['price', 'summaryDetail', 'defaultKeyStatistics']
     });
 
