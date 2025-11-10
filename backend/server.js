@@ -47,13 +47,26 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    console.log('CORS check - Origin:', origin, '| Allowed:', allowedOrigins.indexOf(origin) !== -1);
-
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost:')) {
+      console.log('CORS check - Origin:', origin, '| Allowed: true (localhost)');
+      return callback(null, true);
     }
+
+    // Allow all Vercel preview and production deployments
+    if (origin.endsWith('.vercel.app')) {
+      console.log('CORS check - Origin:', origin, '| Allowed: true (vercel.app)');
+      return callback(null, true);
+    }
+
+    // Check against explicit allowed origins
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('CORS check - Origin:', origin, '| Allowed: true (explicit)');
+      return callback(null, true);
+    }
+
+    console.log('CORS check - Origin:', origin, '| Allowed: false');
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
