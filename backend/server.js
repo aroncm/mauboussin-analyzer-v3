@@ -29,8 +29,8 @@ const cache = new NodeCache({
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Trust proxy - required for Railway deployment and rate limiting
-app.set('trust proxy', true);
+// Trust proxy - Railway uses 1 proxy level
+app.set('trust proxy', 1);
 
 // Configure CORS with allowed origins
 const allowedOrigins = [
@@ -247,27 +247,35 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
 
   try {
-    const quote = await yf.quote(symbol);
+    // Use quoteSummary with specific modules for more reliable data fetching
+    const result = await yf.quoteSummary(symbol, {
+      modules: ['price', 'summaryDetail', 'defaultKeyStatistics']
+    });
 
-    if (!quote) {
+    if (!result) {
       return res.status(404).json({ error: 'Symbol not found in Yahoo Finance' });
     }
 
+    // Extract data from different modules
+    const price = result.price || {};
+    const summaryDetail = result.summaryDetail || {};
+    const keyStats = result.defaultKeyStatistics || {};
+
     // Extract relevant data
     const marketData = {
-      marketCap: quote.marketCap,
-      enterpriseValue: quote.enterpriseValue,
-      trailingPE: quote.trailingPE,
-      forwardPE: quote.forwardPE,
-      priceToBook: quote.priceToBook,
-      beta: quote.beta,
-      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
-      sharesOutstanding: quote.sharesOutstanding,
-      floatShares: quote.floatShares,
-      averageVolume: quote.averageVolume,
-      currentPrice: quote.regularMarketPrice,
-      currency: quote.currency
+      marketCap: price.marketCap,
+      enterpriseValue: keyStats.enterpriseValue,
+      trailingPE: summaryDetail.trailingPE,
+      forwardPE: summaryDetail.forwardPE,
+      priceToBook: keyStats.priceToBook,
+      beta: keyStats.beta,
+      fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow,
+      sharesOutstanding: keyStats.sharesOutstanding,
+      floatShares: keyStats.floatShares,
+      averageVolume: summaryDetail.averageVolume,
+      currentPrice: price.regularMarketPrice,
+      currency: price.currency
     };
 
     res.json(marketData);
