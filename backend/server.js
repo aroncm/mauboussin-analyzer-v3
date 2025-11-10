@@ -5,9 +5,16 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
-import yahooFinance from 'yahoo-finance2';
+import yf from 'yahoo-finance2';
 
 dotenv.config();
+
+// Configure yahoo-finance2
+yf.setGlobalConfig({
+  validation: {
+    logErrors: true,
+  }
+});
 
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -28,6 +35,9 @@ const cache = new NodeCache({
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy - required for Railway deployment and rate limiting
+app.set('trust proxy', true);
 
 // Configure CORS with allowed origins
 const allowedOrigins = [
@@ -244,7 +254,7 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
 
   try {
-    const quote = await yahooFinance.quote(symbol);
+    const quote = await yf.quote(symbol);
 
     if (!quote) {
       return res.status(404).json({ error: 'Symbol not found in Yahoo Finance' });
