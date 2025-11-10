@@ -36,10 +36,15 @@ const allowedOrigins = [
   process.env.FRONTEND_URL // Production frontend URL
 ].filter(Boolean); // Remove undefined values
 
+console.log('Allowed CORS origins:', allowedOrigins);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
+
+    console.log('CORS check - Origin:', origin, '| Allowed:', allowedOrigins.indexOf(origin) !== -1);
 
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
