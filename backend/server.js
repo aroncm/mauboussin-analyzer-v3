@@ -358,14 +358,27 @@ ${waccSection}`;
     let earningsSection = '';
     if (companyData.earningsData && companyData.earningsData.quarterlyEarnings) {
       const quarters = companyData.earningsData.quarterlyEarnings.slice(0, 4);
-      earningsSection = `
-RECENT EARNINGS TREND (Last 4 Quarters):
-${quarters.map((q, i) => `Q${4-i} ${q.fiscalDateEnding}: EPS $${q.reportedEPS || 'N/A'} (Est: $${q.estimatedEPS || 'N/A'}) - Surprise: ${q.surprise || 'N/A'}%`).join('\n')}
+      const beatCount = quarters.filter(q => parseFloat(q.surprise || 0) > 0).length;
+      const missCount = quarters.filter(q => parseFloat(q.surprise || 0) < 0).length;
 
-Use this earnings trend for qualitative analysis of:
-- Earnings quality and consistency
-- Management's ability to meet/beat expectations
-- Improving or declining business trajectory`;
+      earningsSection = `
+RECENT EARNINGS TREND & SENTIMENT (Last 4 Quarters):
+${quarters.map((q, i) => {
+  const surprise = parseFloat(q.surprise || 0);
+  const sentiment = surprise > 2 ? '📈 Strong Beat' : surprise > 0 ? '✅ Beat' : surprise < -2 ? '📉 Big Miss' : '❌ Miss';
+  return `Q${4-i} ${q.fiscalDateEnding}: EPS $${q.reportedEPS || 'N/A'} (Est: $${q.estimatedEPS || 'N/A'}) - Surprise: ${q.surprise || 'N/A'}% ${sentiment}`;
+}).join('\n')}
+
+Earnings Pattern: ${beatCount} beats, ${missCount} misses out of ${quarters.length} quarters
+Track Record: ${beatCount >= 3 ? 'Consistently beating expectations 🟢' : beatCount >= 2 ? 'Mixed performance 🟡' : 'Struggling to meet expectations 🔴'}
+
+**CRITICAL: Perform EARNINGS CALL SENTIMENT ANALYSIS**
+Based on the earnings pattern above, provide a qualitative sentiment assessment:
+- Management credibility (are they sandbagging guidance or overpromising?)
+- Earnings quality (are beats driven by one-time items or sustainable operations?)
+- Forward guidance tone (optimistic, cautious, or deteriorating?)
+- Red flags (repeated misses, declining margins, weakening demand signals)
+- Positive signals (consistent beats, margin expansion, strong guidance)`;
     }
 
     const prompt = `You are a strategic analyst using Michael Mauboussin's investment frameworks, specifically "Measuring the Moat" and competitive analysis principles.
@@ -442,12 +455,15 @@ Perform a complete Mauboussin competitive analysis using the "Measuring the Moat
 
 KEY FRAMEWORKS TO APPLY:
 
-1. **MEASURING THE MOAT** (Mauboussin):
-   - Assess the DURABILITY and STRENGTH of competitive advantages
-   - Look for evidence of pricing power, customer captivity, and market share stability
-   - Analyze whether advantages are based on: supply advantages (economies of scale, network effects) or demand advantages (brand, habit, search costs)
-   - Evaluate whether the moat is WIDENING, STABLE, or NARROWING
-   - Connect moat strength directly to sustained ROIC > WACC
+1. **MEASURING THE MOAT** (Mauboussin) - **PRIMARY FOCUS OF ANALYSIS**:
+   - **CRITICAL**: Provide a comprehensive competitive moat assessment as the centerpiece of your analysis
+   - Identify PRIMARY moat source: Network effects / Scale economies / Intangible assets / Switching costs / Cost advantages
+   - Assess moat STRENGTH: Wide (sustainable 10+ years) / Narrow (5-10 years) / None (< 5 years)
+   - Classify advantage type: Supply-side (scale, network) or Demand-side (brand, habit, search costs)
+   - Evaluate moat TRAJECTORY: WIDENING (strengthening) / STABLE (maintaining) / NARROWING (weakening)
+   - Provide QUANTITATIVE evidence: gross margins vs peers, customer retention rates, market share trends, pricing power metrics
+   - Connect moat strength directly to sustained ROIC > WACC and explain the causal mechanism
+   - Identify threats to the moat and timeline for potential erosion
 
 2. **ROIC ANALYSIS**:
    - Calculate ROIC with precision, showing all steps
@@ -522,20 +538,29 @@ Your response MUST be valid JSON in this EXACT format:
   },
   
   "moatAnalysis": {
-    "moatType": "Primary source: Network effects / Scale economies / Intangible assets / Switching costs / Cost advantages",
-    "moatStrength": "Wide / Narrow / None - be rigorous with justification",
-    "supplyOrDemandAdvantage": "Is this a supply-side (scale, network) or demand-side (brand, habit) advantage?",
-    "evidenceForMoat": "QUANTITATIVE evidence: gross margins vs peers, customer retention rates, market share trends, pricing power metrics",
-    "moatDurability": "Is the moat WIDENING, STABLE, or NARROWING? What threatens it?",
-    "linkToROIC": "Specific mechanism: how does this moat translate to sustained high ROIC?",
-    "measurability": "How easy is it to measure this moat? High/Medium/Low"
+    "summary": "2-3 sentence executive summary of the competitive moat",
+    "moatType": "Primary moat source (choose one or ranked combination): Network effects / Scale economies / Intangible assets (brand, patents) / Switching costs / Cost advantages",
+    "moatStrength": "Wide (10+ years sustainable) / Narrow (5-10 years) / None (< 5 years) - with detailed justification",
+    "moatStrengthRating": "Rate from 1-10 where 10 is an unassailable moat",
+    "supplyOrDemandAdvantage": "Classify as: Supply-side (scale, network effects) or Demand-side (brand, habit, search costs) or Both",
+    "evidenceForMoat": "QUANTITATIVE evidence REQUIRED: gross margins %, customer retention %, market share %, pricing power examples, historical stability",
+    "moatDurability": "Trajectory: WIDENING (moat strengthening over time) / STABLE (maintaining position) / NARROWING (competitive threats eroding advantages)",
+    "threatsToMoat": "Specific competitive threats and timeline for potential erosion (e.g., technological disruption, regulatory changes, new entrants)",
+    "linkToROIC": "Detailed mechanism: how does this moat create pricing power, cost advantages, or capital efficiency that sustains ROIC > WACC?",
+    "comparativeMoat": "How does this moat compare to key competitors? Better/Similar/Worse?",
+    "measurability": "How easy is it to measure this moat objectively? High/Medium/Low with explanation"
   },
 
-  "earningsQuality": {
-    "trend": "Improving / Stable / Declining based on quarterly data",
-    "consistency": "Beat/miss pattern - is management credible?",
-    "qualitativeSignals": "Any red or green flags from recent earnings?",
-    "applicableIfDataProvided": "Only complete this if quarterly earnings data was provided"
+  "earningsCallSentiment": {
+    "overallSentiment": "Positive / Neutral / Negative - based on recent earnings pattern",
+    "managementCredibility": "High / Medium / Low - Are they sandbagging or overpromising? Track record of meeting guidance",
+    "earningsQuality": "Sustainable / Mixed / Concerning - Are beats from operations or one-time items?",
+    "forwardGuidance": "Optimistic / Cautious / Deteriorating - Tone and substance of management commentary",
+    "beatMissPattern": "Detailed analysis of the X beats / Y misses pattern - what does it reveal?",
+    "redFlags": "List specific red flags: repeated misses, margin pressure, weakening demand signals, accounting concerns",
+    "positiveSignals": "List positive signals: consistent beats, margin expansion, strong guidance, market share gains",
+    "sentimentScore": "Rate management credibility and earnings quality from 1-10 where 10 is impeccable",
+    "applicableIfDataProvided": "Complete this section ONLY if quarterly earnings data was provided above"
   },
   
   "expectationsAnalysis": {

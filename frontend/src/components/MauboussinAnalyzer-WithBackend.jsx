@@ -492,30 +492,22 @@ Generated: ${new Date().toLocaleString()}
           <p className="text-sm text-gray-500">Powered by Alpha Vantage API + Claude Analysis</p>
         </div>
 
-        {/* Backend Status */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Error notification only when backend is down */}
+        {!backendConnected && (
+          <div className="bg-red-50 rounded-2xl shadow-lg p-6 mb-8 border-2 border-red-200">
             <div className="flex items-center gap-3">
-              <Server size={24} className={backendConnected ? 'text-green-600' : 'text-red-600'} />
+              <Server size={24} className="text-red-600" />
               <div>
-                <span className={`font-medium ${backendConnected ? 'text-green-700' : 'text-red-700'}`}>
-                  Backend Server: {backendConnected ? 'Connected ✅' : 'Not Connected ❌'}
+                <span className="font-medium text-red-700">
+                  Unable to connect to analysis server
                 </span>
-                {!backendConnected && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Check if your backend is running
-                  </p>
-                )}
+                <p className="text-sm text-gray-600 mt-1">
+                  Please try again later or contact support if the issue persists
+                </p>
               </div>
             </div>
-            <button
-              onClick={checkBackendConnection}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-            >
-              Retry Connection
-            </button>
           </div>
-        </div>
+        )}
 
         {/* Search Box */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
@@ -821,15 +813,7 @@ Generated: ${new Date().toLocaleString()}
         )}
 
         {/* Footer */}
-        {!isAnalyzing && !analysis && (
-          <div className="text-center mt-12 space-y-6">
-            <blockquote className="text-gray-600 italic text-lg">
-              "The big money is not in the buying or selling, but in the waiting."
-              <br />
-              <span className="text-gray-500 text-base">— Charlie Munger</span>
-            </blockquote>
-          </div>
-        )}
+        {/* Placeholder removed - cleaner UI */}
       </div>
 
       {/* Export Modal */}
