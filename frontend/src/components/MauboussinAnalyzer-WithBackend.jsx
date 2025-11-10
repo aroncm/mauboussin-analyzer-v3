@@ -701,7 +701,17 @@ Generated: ${new Date().toLocaleString()}
                   </div>
                   <div>
                     <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
-                    <p className="text-gray-800">{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                    <div className="text-gray-800">
+                      {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
+                        <div className="space-y-1">
+                          <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
+                          <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
+                          <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
