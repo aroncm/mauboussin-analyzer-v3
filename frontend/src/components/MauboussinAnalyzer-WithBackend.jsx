@@ -199,17 +199,20 @@ const MauboussinAIAnalyzer = () => {
         fiscalPeriod: income.fiscalDateEnding,
         currency: profile.Currency || 'USD',
 
-        // Market data from Yahoo Finance
-        marketData: yahooData ? {
-          marketCap: yahooData.marketCap,
-          enterpriseValue: yahooData.enterpriseValue,
-          beta: yahooData.beta,
-          trailingPE: yahooData.trailingPE,
-          forwardPE: yahooData.forwardPE,
-          priceToBook: yahooData.priceToBook,
-          sharesOutstanding: yahooData.sharesOutstanding,
-          currentPrice: yahooData.currentPrice
-        } : null,
+        // Market data from Alpha Vantage
+        marketData: {
+          marketCap: parseFinancialNumber(profile.MarketCapitalization),
+          beta: parseFloat(profile.Beta) || null,
+          trailingPE: parseFloat(profile.PERatio) || null,
+          forwardPE: parseFloat(profile.ForwardPE) || null,
+          priceToBook: parseFloat(profile.PriceToBookRatio) || null,
+          fiftyTwoWeekHigh: parseFloat(profile['52WeekHigh']) || null,
+          fiftyTwoWeekLow: parseFloat(profile['52WeekLow']) || null,
+          sharesOutstanding: parseFinancialNumber(profile.SharesOutstanding),
+          // Note: enterpriseValue and currentPrice not available from Alpha Vantage
+          enterpriseValue: null,
+          currentPrice: null
+        },
 
         // Recent earnings data for qualitative analysis
         earningsData: earningsData ? {
