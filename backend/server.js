@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { ProfilingIntegration } from '@sentry/profiling-node';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
@@ -14,11 +13,7 @@ dotenv.config();
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    integrations: [
-      new ProfilingIntegration(),
-    ],
     tracesSampleRate: 1.0,
-    profilesSampleRate: 1.0,
     environment: process.env.NODE_ENV || 'development',
   });
 }
