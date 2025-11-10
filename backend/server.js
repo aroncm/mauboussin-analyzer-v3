@@ -5,12 +5,9 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
-import { YahooFinance } from 'yahoo-finance2';
+import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
-
-// Initialize Yahoo Finance
-const yahooFinance = new YahooFinance();
 
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
