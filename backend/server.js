@@ -247,35 +247,28 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
 
   try {
-    // Use quoteSummary with specific modules for more reliable data fetching
-    const result = await yahooFinance.quoteSummary(symbol, {
-      modules: ['price', 'summaryDetail', 'defaultKeyStatistics']
-    });
+    // Use the simpler quote method (v2 compatible)
+    const quote = await yahooFinance.quote(symbol);
 
-    if (!result) {
+    if (!quote) {
       return res.status(404).json({ error: 'Symbol not found in Yahoo Finance' });
     }
 
-    // Extract data from different modules
-    const price = result.price || {};
-    const summaryDetail = result.summaryDetail || {};
-    const keyStats = result.defaultKeyStatistics || {};
-
     // Extract relevant data
     const marketData = {
-      marketCap: price.marketCap,
-      enterpriseValue: keyStats.enterpriseValue,
-      trailingPE: summaryDetail.trailingPE,
-      forwardPE: summaryDetail.forwardPE,
-      priceToBook: keyStats.priceToBook,
-      beta: keyStats.beta,
-      fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow,
-      sharesOutstanding: keyStats.sharesOutstanding,
-      floatShares: keyStats.floatShares,
-      averageVolume: summaryDetail.averageVolume,
-      currentPrice: price.regularMarketPrice,
-      currency: price.currency
+      marketCap: quote.marketCap,
+      enterpriseValue: quote.enterpriseValue,
+      trailingPE: quote.trailingPE,
+      forwardPE: quote.forwardPE,
+      priceToBook: quote.priceToBook,
+      beta: quote.beta,
+      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+      sharesOutstanding: quote.sharesOutstanding,
+      floatShares: quote.floatShares,
+      averageVolume: quote.averageVolume,
+      currentPrice: quote.regularMarketPrice,
+      currency: quote.currency
     };
 
     res.json(marketData);
