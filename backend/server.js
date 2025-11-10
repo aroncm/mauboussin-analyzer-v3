@@ -251,7 +251,22 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
     const quote = await yahooFinance.quote(symbol);
 
     if (!quote) {
-      return res.status(404).json({ error: 'Symbol not found in Yahoo Finance' });
+      // Return empty data instead of error to not block analysis
+      return res.json({
+        marketCap: null,
+        enterpriseValue: null,
+        trailingPE: null,
+        forwardPE: null,
+        priceToBook: null,
+        beta: null,
+        fiftyTwoWeekHigh: null,
+        fiftyTwoWeekLow: null,
+        sharesOutstanding: null,
+        floatShares: null,
+        averageVolume: null,
+        currentPrice: null,
+        currency: null
+      });
     }
 
     // Extract relevant data
@@ -274,7 +289,22 @@ app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
     res.json(marketData);
   } catch (error) {
     console.error('Error fetching Yahoo Finance data:', error);
-    res.status(500).json({ error: 'Failed to fetch market data from Yahoo Finance' });
+    // Return empty data instead of 500 error to not block analysis
+    res.json({
+      marketCap: null,
+      enterpriseValue: null,
+      trailingPE: null,
+      forwardPE: null,
+      priceToBook: null,
+      beta: null,
+      fiftyTwoWeekHigh: null,
+      fiftyTwoWeekLow: null,
+      sharesOutstanding: null,
+      floatShares: null,
+      averageVolume: null,
+      currentPrice: null,
+      currency: null
+    });
   }
 });
 
