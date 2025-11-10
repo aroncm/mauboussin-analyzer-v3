@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server } from 'lucide-react';
+import { parseFinancialNumber } from '../utils/formatters';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
