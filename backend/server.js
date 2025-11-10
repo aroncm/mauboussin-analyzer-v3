@@ -9,13 +9,6 @@ import yf from 'yahoo-finance2';
 
 dotenv.config();
 
-// Configure yahoo-finance2
-yf.setGlobalConfig({
-  validation: {
-    logErrors: true,
-  }
-});
-
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
   Sentry.init({
