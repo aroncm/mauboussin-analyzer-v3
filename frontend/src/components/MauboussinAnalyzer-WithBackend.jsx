@@ -424,7 +424,12 @@ Link to ROIC: ${analysis.moatAnalysis.linkToROIC}
 Implied Expectations: ${analysis.expectationsAnalysis.impliedExpectations}
 Valuation: ${analysis.expectationsAnalysis.currentValuation}
 
-Scenarios: ${analysis.expectationsAnalysis.scenarioAnalysis}
+Scenarios:
+${typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null
+  ? `  Bull: ${analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}
+  Base: ${analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}
+  Bear: ${analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}`
+  : analysis.expectationsAnalysis.scenarioAnalysis}
 
 Probability Weighted: ${analysis.expectationsAnalysis.probabilityWeighted}
 
