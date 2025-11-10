@@ -415,12 +415,17 @@ Context: ${analysis.roicAnalysis.valueCreation.context}
 
 Type: ${analysis.moatAnalysis.moatType}
 Strength: ${analysis.moatAnalysis.moatStrength}
+${analysis.moatAnalysis.moatStrengthRating ? `Rating: ${analysis.moatAnalysis.moatStrengthRating}/10` : ''}
+${analysis.moatAnalysis.supplyOrDemandAdvantage ? `Supply/Demand Advantage: ${analysis.moatAnalysis.supplyOrDemandAdvantage}` : ''}
 
 Evidence: ${analysis.moatAnalysis.evidenceForMoat}
 
 Durability: ${analysis.moatAnalysis.moatDurability}
+${analysis.moatAnalysis.threatsToMoat ? `\nThreats: ${analysis.moatAnalysis.threatsToMoat}` : ''}
 
 Link to ROIC: ${analysis.moatAnalysis.linkToROIC}
+${analysis.moatAnalysis.comparativeMoat ? `\nComparative Moat: ${analysis.moatAnalysis.comparativeMoat}` : ''}
+${analysis.moatAnalysis.measurability ? `\nMeasurability: ${analysis.moatAnalysis.measurability}` : ''}
 
 ${analysis.earningsCallSentiment ? `
 ═══════════════════════════════════════════════════════════════════════
@@ -676,6 +681,18 @@ Generated: ${new Date().toLocaleString()}
                     <p className="text-gray-600 font-medium mb-1">Moat Strength:</p>
                     <p className="text-gray-800 text-lg font-bold">{analysis.moatAnalysis.moatStrength}</p>
                   </div>
+                  {analysis.moatAnalysis.moatStrengthRating && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Moat Strength Rating:</p>
+                      <p className="text-gray-800 text-lg font-bold">{analysis.moatAnalysis.moatStrengthRating}/10</p>
+                    </div>
+                  )}
+                  {analysis.moatAnalysis.supplyOrDemandAdvantage && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Supply/Demand Advantage:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.supplyOrDemandAdvantage}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-gray-600 font-medium mb-1">Evidence:</p>
                     <p className="text-gray-800">{analysis.moatAnalysis.evidenceForMoat}</p>
@@ -684,10 +701,28 @@ Generated: ${new Date().toLocaleString()}
                     <p className="text-gray-600 font-medium mb-1">Durability:</p>
                     <p className="text-gray-800">{analysis.moatAnalysis.moatDurability}</p>
                   </div>
+                  {analysis.moatAnalysis.threatsToMoat && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Threats to Moat:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.threatsToMoat}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-gray-600 font-medium mb-1">Link to ROIC:</p>
                     <p className="text-gray-800">{analysis.moatAnalysis.linkToROIC}</p>
                   </div>
+                  {analysis.moatAnalysis.comparativeMoat && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Comparative Moat:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.comparativeMoat}</p>
+                    </div>
+                  )}
+                  {analysis.moatAnalysis.measurability && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Measurability:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.measurability}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
