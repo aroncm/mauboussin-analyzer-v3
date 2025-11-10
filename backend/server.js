@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
-import yahooFinance from 'yahoo-finance2';
+// import yahooFinance from 'yahoo-finance2'; // TEMPORARILY DISABLED due to v3 API issues
 
 dotenv.config();
 
@@ -243,69 +243,29 @@ app.get('/api/av/cash-flow/:symbol', cacheMiddleware, async (req, res) => {
 });
 
 // Fetch market data from Yahoo Finance (market cap, beta, etc.)
+// TEMPORARILY DISABLED: Yahoo Finance v3 API integration issue
+// Returns null values to not block analysis
 app.get('/api/yf/quote/:symbol', cacheMiddleware, async (req, res) => {
   const { symbol } = req.params;
 
-  try {
-    // Use the simpler quote method (v2 compatible)
-    const quote = await yahooFinance.quote(symbol);
+  console.log(`Yahoo Finance request for ${symbol} - returning null values (API temporarily disabled)`);
 
-    if (!quote) {
-      // Return empty data instead of error to not block analysis
-      return res.json({
-        marketCap: null,
-        enterpriseValue: null,
-        trailingPE: null,
-        forwardPE: null,
-        priceToBook: null,
-        beta: null,
-        fiftyTwoWeekHigh: null,
-        fiftyTwoWeekLow: null,
-        sharesOutstanding: null,
-        floatShares: null,
-        averageVolume: null,
-        currentPrice: null,
-        currency: null
-      });
-    }
-
-    // Extract relevant data
-    const marketData = {
-      marketCap: quote.marketCap,
-      enterpriseValue: quote.enterpriseValue,
-      trailingPE: quote.trailingPE,
-      forwardPE: quote.forwardPE,
-      priceToBook: quote.priceToBook,
-      beta: quote.beta,
-      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
-      sharesOutstanding: quote.sharesOutstanding,
-      floatShares: quote.floatShares,
-      averageVolume: quote.averageVolume,
-      currentPrice: quote.regularMarketPrice,
-      currency: quote.currency
-    };
-
-    res.json(marketData);
-  } catch (error) {
-    console.error('Error fetching Yahoo Finance data:', error);
-    // Return empty data instead of 500 error to not block analysis
-    res.json({
-      marketCap: null,
-      enterpriseValue: null,
-      trailingPE: null,
-      forwardPE: null,
-      priceToBook: null,
-      beta: null,
-      fiftyTwoWeekHigh: null,
-      fiftyTwoWeekLow: null,
-      sharesOutstanding: null,
-      floatShares: null,
-      averageVolume: null,
-      currentPrice: null,
-      currency: null
-    });
-  }
+  // Return empty data to not block analysis
+  res.json({
+    marketCap: null,
+    enterpriseValue: null,
+    trailingPE: null,
+    forwardPE: null,
+    priceToBook: null,
+    beta: null,
+    fiftyTwoWeekHigh: null,
+    fiftyTwoWeekLow: null,
+    sharesOutstanding: null,
+    floatShares: null,
+    averageVolume: null,
+    currentPrice: null,
+    currency: null
+  });
 });
 
 // Fetch earnings call transcript (using financial modeling prep or similar)
