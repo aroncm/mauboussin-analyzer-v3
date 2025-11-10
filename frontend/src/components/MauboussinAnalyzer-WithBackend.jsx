@@ -14,6 +14,7 @@ const MauboussinAIAnalyzer = () => {
   const [expandedSections, setExpandedSections] = useState({
     roic: true,
     moat: true,
+    earnings: true,
     expectations: true,
     probabilistic: true,
     management: true,
@@ -421,8 +422,23 @@ Durability: ${analysis.moatAnalysis.moatDurability}
 
 Link to ROIC: ${analysis.moatAnalysis.linkToROIC}
 
+${analysis.earningsCallSentiment ? `
 ═══════════════════════════════════════════════════════════════════════
-3️⃣  EXPECTATIONS INVESTING
+3️⃣  EARNINGS CALL SENTIMENT
+═══════════════════════════════════════════════════════════════════════
+
+Overall Sentiment: ${analysis.earningsCallSentiment.overallSentiment}
+Beat/Miss Pattern: ${analysis.earningsCallSentiment.beatMissPattern}
+Management Credibility: ${analysis.earningsCallSentiment.managementCredibility}
+Earnings Quality: ${analysis.earningsCallSentiment.earningsQuality}
+Forward Guidance: ${analysis.earningsCallSentiment.forwardGuidance}
+Red Flags: ${analysis.earningsCallSentiment.redFlags}
+Positive Signals: ${analysis.earningsCallSentiment.positiveSignals}
+Sentiment Score: ${analysis.earningsCallSentiment.sentimentScore}/10
+` : ''}
+
+═══════════════════════════════════════════════════════════════════════
+4️⃣  EXPECTATIONS INVESTING
 ═══════════════════════════════════════════════════════════════════════
 
 Implied Expectations: ${analysis.expectationsAnalysis.impliedExpectations}
@@ -438,7 +454,7 @@ ${typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis
 Probability Weighted: ${analysis.expectationsAnalysis.probabilityWeighted}
 
 ═══════════════════════════════════════════════════════════════════════
-4️⃣  PROBABILISTIC THINKING
+5️⃣  PROBABILISTIC THINKING
 ═══════════════════════════════════════════════════════════════════════
 
 Base Rates: ${analysis.probabilistic.baseRates}
@@ -448,7 +464,7 @@ Skill vs Luck: ${analysis.probabilistic.skillVsLuck}
 Key Uncertainties: ${analysis.probabilistic.keyUncertainties}
 
 ═══════════════════════════════════════════════════════════════════════
-5️⃣  MANAGEMENT QUALITY
+6️⃣  MANAGEMENT QUALITY
 ═══════════════════════════════════════════════════════════════════════
 
 Capital Allocation: ${analysis.management.capitalAllocation}
@@ -458,7 +474,7 @@ Strategic Thinking: ${analysis.management.strategicThinking}
 Assessment: ${analysis.management.overallAssessment}
 
 ═══════════════════════════════════════════════════════════════════════
-6️⃣  INVESTMENT CONCLUSION
+7️⃣  INVESTMENT CONCLUSION
 ═══════════════════════════════════════════════════════════════════════
 
 💡 Thesis: ${analysis.conclusion.investmentThesis}
@@ -675,6 +691,59 @@ Generated: ${new Date().toLocaleString()}
                 </div>
               )}
             </div>
+
+            {/* Earnings Call Sentiment */}
+            {analysis.earningsCallSentiment && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('earnings')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <TrendingUp size={28} className="text-green-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
+                  </div>
+                  {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.earnings && (
+                  <div className="p-8 space-y-4">
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Expectations Investing */}
             <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
