@@ -4,9 +4,13 @@ import { parseFinancialNumber } from '../utils/formatters';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps] = useState(7);
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -42,6 +46,44 @@ const MauboussinAIAnalyzer = () => {
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  // Autocomplete search for company names
+  const searchCompanies = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowAutocomplete(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/av/search?query=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.slice(0, 5)); // Show top 5 results
+        setShowAutocomplete(data.length > 0);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  };
+
+  // Handle input change with debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (companyInput) {
+        searchCompanies(companyInput);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [companyInput]);
+
+  // Select company from autocomplete
+  const selectCompany = (symbol, name) => {
+    setCompanyInput(`${symbol} - ${name}`);
+    setShowAutocomplete(false);
+    setSearchResults([]);
   };
 
   // Retry helper function for API calls
@@ -89,11 +131,19 @@ const MauboussinAIAnalyzer = () => {
     setIsAnalyzing(true);
     setError(null);
     setAnalysis(null);
+    setCurrentStep(0);
+    setLoadingStep('');
 
     try {
       // Step 1: Get company ticker if name was provided
-      setLoadingStep('🔍 Looking up company ticker...');
+      setCurrentStep(1);
+      setLoadingStep('Looking up company ticker');
       let ticker = companyInput.trim().toUpperCase();
+
+      // Extract ticker if format is "AAPL - Apple Inc."
+      if (ticker.includes(' - ')) {
+        ticker = ticker.split(' - ')[0].trim();
+      }
       
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
@@ -106,10 +156,9 @@ const MauboussinAIAnalyzer = () => {
           }
 
           const searchData = await searchResponse.json();
-          
+
           if (searchData && searchData.length > 0) {
-            ticker = searchData[0].symbol;
-            setLoadingStep(`✓ Found ticker: ${ticker}`);
+            ticker = searchData[0]['1. symbol'];
           } else {
             throw new Error('Company not found. Try using the ticker symbol directly (e.g., AAPL)');
           }
@@ -118,8 +167,9 @@ const MauboussinAIAnalyzer = () => {
         }
       }
 
-      // Step 2-6: Fetch all financial data in parallel for better performance
-      setLoadingStep(`📊 Fetching financial data for ${ticker}...`);
+      // Step 2: Fetch all financial data in parallel for better performance
+      setCurrentStep(2);
+      setLoadingStep(`Fetching financial data for ${ticker}`);
 
       const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse, yahooResponse, earningsResponse] = await Promise.all([
         fetchWithRetry(`${BACKEND_URL}/api/av/overview/${ticker}`),
@@ -182,7 +232,9 @@ const MauboussinAIAnalyzer = () => {
       const historicalBalance = balanceData.slice(0, Math.min(5, balanceData.length));
       const historicalCashFlow = cashFlowData.slice(0, Math.min(5, cashFlowData.length));
 
-      setLoadingStep('✓ Financial data fetched successfully');
+      // Step 3: Parse and validate financial data
+      setCurrentStep(3);
+      setLoadingStep('Parsing financial data');
 
       // Helper function to convert Alpha Vantage's "None" strings to 0
       const parseNumber = (value) => {
@@ -192,7 +244,10 @@ const MauboussinAIAnalyzer = () => {
         return parseFloat(value) || 0;
       };
 
-      // Step 6: Prepare financial data for analysis
+      // Step 4: Prepare financial data for analysis
+      setCurrentStep(4);
+      setLoadingStep('Preparing financial data');
+
       const financialData = {
         companyName: profile.Name,
         ticker: ticker,
@@ -290,8 +345,13 @@ const MauboussinAIAnalyzer = () => {
         }
       };
 
-      // Step 6: Perform Mauboussin Analysis using Backend API (which calls Claude)
-      setLoadingStep('🧮 Calculating ROIC and applying Mauboussin framework...');
+      // Step 5: Calculate ROIC metrics
+      setCurrentStep(5);
+      setLoadingStep('Calculating ROIC metrics');
+
+      // Step 6: Perform AI analysis
+      setCurrentStep(6);
+      setLoadingStep('Performing AI analysis with Mauboussin framework');
 
       const analysisResponse = await fetchWithRetry(`${BACKEND_URL}/api/analyze`, {
         method: "POST",
@@ -324,11 +384,15 @@ const MauboussinAIAnalyzer = () => {
       }
 
       setAnalysis(parsedAnalysis);
-      setLoadingStep('✓ Analysis complete!');
+
+      // Step 7: Complete
+      setCurrentStep(7);
+      setLoadingStep('');
 
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err.message || 'An error occurred during analysis. Please try again.');
+      setLoadingStep('');
     } finally {
       setIsAnalyzing(false);
     }
@@ -541,41 +605,87 @@ Generated: ${new Date().toLocaleString()}
 
         {/* Search Box */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={companyInput}
-              onChange={(e) => setCompanyInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
-              placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
-              disabled={isAnalyzing}
-              className="flex-1 px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
-            />
-            <button
-              onClick={analyzeCompany}
-              disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader className="animate-spin" size={24} />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Search size={24} />
-                  Analyze
-                </>
-              )}
-            </button>
-          </div>
-          
-          {loadingStep && (
-            <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Loader className="animate-spin text-blue-600" size={20} />
-                <span className="text-blue-800 font-medium">{loadingStep}</span>
+          <div className="relative">
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={companyInput}
+                  onChange={(e) => setCompanyInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
+                  onFocus={() => searchResults.length > 0 && setShowAutocomplete(true)}
+                  placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
+                  disabled={isAnalyzing}
+                  className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
+                />
+
+                {/* Autocomplete dropdown */}
+                {showAutocomplete && searchResults.length > 0 && !isAnalyzing && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-xl z-10 max-h-64 overflow-y-auto">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectCompany(result['1. symbol'], result['2. name'])}
+                        className="w-full px-6 py-3 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-semibold text-gray-800">{result['1. symbol']}</div>
+                        <div className="text-sm text-gray-600">{result['2. name']}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              <button
+                onClick={analyzeCompany}
+                disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader className="animate-spin" size={24} />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Search size={24} />
+                    Analyze
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Progress indicator - only show during analysis */}
+          {isAnalyzing && (
+            <div className="mt-6">
+              {/* Progress bar */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Step {currentStep} of {totalSteps}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {Math.round((currentStep / totalSteps) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Current step description */}
+              {loadingStep && (
+                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Loader className="animate-spin text-blue-600" size={20} />
+                    <span className="text-blue-800 font-medium">{loadingStep}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
