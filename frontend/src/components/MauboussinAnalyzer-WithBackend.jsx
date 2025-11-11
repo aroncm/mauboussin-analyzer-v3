@@ -156,9 +156,9 @@ const MauboussinAIAnalyzer = () => {
           }
 
           const searchData = await searchResponse.json();
-          
+
           if (searchData && searchData.length > 0) {
-            ticker = searchData[0].symbol;
+            ticker = searchData[0]['1. symbol'];
           } else {
             throw new Error('Company not found. Try using the ticker symbol directly (e.g., AAPL)');
           }
@@ -625,11 +625,11 @@ Generated: ${new Date().toLocaleString()}
                     {searchResults.map((result, index) => (
                       <button
                         key={index}
-                        onClick={() => selectCompany(result.symbol, result.name)}
+                        onClick={() => selectCompany(result['1. symbol'], result['2. name'])}
                         className="w-full px-6 py-3 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
                       >
-                        <div className="font-semibold text-gray-800">{result.symbol}</div>
-                        <div className="text-sm text-gray-600">{result.name}</div>
+                        <div className="font-semibold text-gray-800">{result['1. symbol']}</div>
+                        <div className="text-sm text-gray-600">{result['2. name']}</div>
                       </button>
                     ))}
                   </div>
