@@ -10,8 +10,11 @@ import Stripe from 'stripe';
 
 dotenv.config();
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+// Initialize Stripe (optional - only if keys are provided)
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -680,7 +683,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
   try {
     const { successUrl, cancelUrl } = req.body;
 
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!stripe) {
       return res.status(500).json({ error: 'Stripe not configured' });
     }
 
@@ -764,7 +767,7 @@ app.get('/api/verify-payment/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
 
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!stripe) {
       return res.status(500).json({ error: 'Stripe not configured' });
     }
 
