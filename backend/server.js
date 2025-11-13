@@ -516,47 +516,54 @@ CRITICAL REQUIREMENTS:
 
 Your response MUST be valid JSON in this EXACT format:
 
+CURRENCY FORMATTING RULE: Format ALL currency values using:
+- $X.XT for trillions (e.g., $2.5T)
+- $X.XB for billions (e.g., $123.5B)
+- $X.XM for millions (e.g., $456.7M)
+- $X.XK for thousands (e.g., $789.2K)
+Show 1 decimal place. Examples: "$45.2B", "$1.3T", "$789.5M"
+
 {
   "companyName": "${companyData.companyName}",
   "ticker": "${companyData.ticker}",
   "businessModel": "2-3 sentence description of how the company makes money",
   "industry": "${companyData.industry}",
   "fiscalYear": "${companyData.fiscalPeriod}",
-  
+
   "roicAnalysis": {
     "nopat": {
-      "ebit": "Number in millions",
-      "taxRate": "Percentage",
-      "nopatCalculated": "EBIT × (1 - tax rate) in millions",
-      "calculationShown": "Show step: EBIT $X × (1 - Y%) = NOPAT $Z"
+      "ebit": "Currency formatted (e.g., $45.2B)",
+      "taxRate": "Percentage (e.g., 21.0%)",
+      "nopatCalculated": "Currency formatted (e.g., $35.7B)",
+      "calculationShown": "Show step with currency format: EBIT $45.2B × (1 - 21.0%) = NOPAT $35.7B"
     },
     "investedCapital": {
       "method": "Operating approach: NWC + Net Fixed Assets",
-      "currentAssets": "Number in millions",
-      "currentLiabilities": "Number in millions",
-      "netWorkingCapital": "Current Assets - Current Liabilities",
-      "ppe": "PP&E in millions",
-      "goodwill": "Goodwill in millions",
-      "intangibles": "Intangibles in millions",
-      "totalIC": "Sum of components",
-      "calculationShown": "Show: NWC $X + PP&E $Y + Goodwill $Z = IC $Total",
-      "alternativeMethod": "Also show: Equity + Debt - Excess Cash"
+      "currentAssets": "Currency formatted (e.g., $123.5B)",
+      "currentLiabilities": "Currency formatted (e.g., $78.2B)",
+      "netWorkingCapital": "Currency formatted (e.g., $45.3B)",
+      "ppe": "Currency formatted (e.g., $89.4B)",
+      "goodwill": "Currency formatted (e.g., $12.3B)",
+      "intangibles": "Currency formatted (e.g., $8.7B)",
+      "totalIC": "Currency formatted total (e.g., $155.7B)",
+      "calculationShown": "Show all components with currency format: NWC $45.3B + PP&E $89.4B + Goodwill $12.3B + Intangibles $8.7B = IC $155.7B",
+      "alternativeMethod": "Also show with currency format: Total Equity + Total Debt - Excess Cash"
     },
     "roicCalculated": {
-      "percentage": "ROIC as percentage",
-      "calculation": "NOPAT / IC = X%",
+      "percentage": "ROIC as percentage (e.g., 22.9%)",
+      "calculation": "Show with currency format: NOPAT $35.7B / IC $155.7B = 22.9%",
       "interpretation": "Assessment vs industry and cost of capital"
     },
     "dupontDecomposition": {
-      "profitMargin": "NOPAT / Revenue as %",
-      "capitalTurnover": "Revenue / IC as ratio",
-      "validation": "Margin × Turnover = ROIC (validate)",
+      "profitMargin": "NOPAT / Revenue as % (e.g., 18.5%)",
+      "capitalTurnover": "Revenue / IC as ratio (e.g., 1.24x)",
+      "validation": "Margin × Turnover = ROIC",
       "strategyInsight": "High margin (differentiation) or high turnover (cost leadership)?"
     },
     "valueCreation": {
-      "calculatedWACC": "Use CAPM cost of equity if provided, adjust for debt. Show calculation.",
-      "spread": "ROIC - WACC in percentage points",
-      "verdict": "Creating/destroying value? Quantify economic profit if possible.",
+      "estimatedWACC": "Estimated WACC as percentage (e.g., 8.5%)",
+      "spread": "ROIC - WACC in percentage points (e.g., +14.4%)",
+      "verdict": "Creating/destroying value? If possible show economic profit with currency format (e.g., Annual value creation: $22.3B)",
       "context": "How does moat enable this ROIC?"
     },
     "historicalTrend": "Calculate ROIC for all available years. Is it improving, stable, or declining? What does this say about moat strength?",
