@@ -29,6 +29,26 @@ const cache = new NodeCache({
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Currency formatting function
+const formatCurrency = (value, decimals = 1) => {
+  if (!value || isNaN(value) || value === 0) return '$0';
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  if (absValue >= 1e12) {
+    return `${sign}$${(absValue / 1e12).toFixed(decimals)}T`;
+  } else if (absValue >= 1e9) {
+    return `${sign}$${(absValue / 1e9).toFixed(decimals)}B`;
+  } else if (absValue >= 1e6) {
+    return `${sign}$${(absValue / 1e6).toFixed(decimals)}M`;
+  } else if (absValue >= 1e3) {
+    return `${sign}$${(absValue / 1e3).toFixed(decimals)}K`;
+  }
+
+  return `${sign}$${absValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
 // Trust proxy - Railway uses 1 proxy level
 app.set('trust proxy', 1);
 
@@ -350,14 +370,14 @@ Note: Use this calculated cost of equity in your WACC estimation, adjusting for 
     if (companyData.marketData) {
       marketDataSection = `
 MARKET DATA (Yahoo Finance):
-Market Cap: $${(companyData.marketData.marketCap / 1e9).toFixed(2)}B
-Enterprise Value: $${(companyData.marketData.enterpriseValue / 1e9).toFixed(2)}B
-Current Price: $${companyData.marketData.currentPrice?.toFixed(2) || 'N/A'}
+Market Cap: ${formatCurrency(companyData.marketData.marketCap, 2)}
+Enterprise Value: ${formatCurrency(companyData.marketData.enterpriseValue, 2)}
+Current Price: ${companyData.marketData.currentPrice ? '$' + companyData.marketData.currentPrice.toFixed(2) : 'N/A'}
 Trailing P/E: ${companyData.marketData.trailingPE?.toFixed(1) || 'N/A'}
 Forward P/E: ${companyData.marketData.forwardPE?.toFixed(1) || 'N/A'}
 Price-to-Book: ${companyData.marketData.priceToBook?.toFixed(2) || 'N/A'}
 Beta: ${companyData.marketData.beta?.toFixed(2) || 'N/A'}
-Shares Outstanding: ${(companyData.marketData.sharesOutstanding / 1e6).toFixed(1)}M
+Shares Outstanding: ${formatCurrency(companyData.marketData.sharesOutstanding, 1)}
 ${waccSection}`;
     }
 
@@ -400,51 +420,51 @@ ${marketDataSection}
 ${earningsSection}
 
 INCOME STATEMENT:
-Revenue: ${(companyData.incomeStatement.revenue / 1e6).toFixed(1)}M
-Cost of Revenue: ${(companyData.incomeStatement.costOfRevenue / 1e6).toFixed(1)}M
-Gross Profit: ${(companyData.incomeStatement.grossProfit / 1e6).toFixed(1)}M
-Operating Expenses: ${(companyData.incomeStatement.operatingExpenses / 1e6).toFixed(1)}M
-Operating Income: ${(companyData.incomeStatement.operatingIncome / 1e6).toFixed(1)}M
-EBIT: ${(companyData.incomeStatement.ebit / 1e6).toFixed(1)}M
-Interest Expense: ${(companyData.incomeStatement.interestExpense / 1e6).toFixed(1)}M
-Tax Expense: ${(companyData.incomeStatement.taxExpense / 1e6).toFixed(1)}M
-Net Income: ${(companyData.incomeStatement.netIncome / 1e6).toFixed(1)}M
+Revenue: ${formatCurrency(companyData.incomeStatement.revenue)}
+Cost of Revenue: ${formatCurrency(companyData.incomeStatement.costOfRevenue)}
+Gross Profit: ${formatCurrency(companyData.incomeStatement.grossProfit)}
+Operating Expenses: ${formatCurrency(companyData.incomeStatement.operatingExpenses)}
+Operating Income: ${formatCurrency(companyData.incomeStatement.operatingIncome)}
+EBIT: ${formatCurrency(companyData.incomeStatement.ebit)}
+Interest Expense: ${formatCurrency(companyData.incomeStatement.interestExpense)}
+Tax Expense: ${formatCurrency(companyData.incomeStatement.taxExpense)}
+Net Income: ${formatCurrency(companyData.incomeStatement.netIncome)}
 Effective Tax Rate: ${(companyData.incomeStatement.taxRate * 100).toFixed(1)}%
 
 BALANCE SHEET:
-Total Assets: ${(companyData.balanceSheet.totalAssets / 1e6).toFixed(1)}M
-Current Assets: ${(companyData.balanceSheet.currentAssets / 1e6).toFixed(1)}M
-  - Cash: ${(companyData.balanceSheet.cash / 1e6).toFixed(1)}M
-  - Accounts Receivable: ${(companyData.balanceSheet.accountsReceivable / 1e6).toFixed(1)}M
-  - Inventory: ${(companyData.balanceSheet.inventory / 1e6).toFixed(1)}M
-PP&E (net): ${(companyData.balanceSheet.ppe / 1e6).toFixed(1)}M
-Goodwill: ${(companyData.balanceSheet.goodwill / 1e6).toFixed(1)}M
-Intangible Assets: ${(companyData.balanceSheet.intangibleAssets / 1e6).toFixed(1)}M
+Total Assets: ${formatCurrency(companyData.balanceSheet.totalAssets)}
+Current Assets: ${formatCurrency(companyData.balanceSheet.currentAssets)}
+  - Cash: ${formatCurrency(companyData.balanceSheet.cash)}
+  - Accounts Receivable: ${formatCurrency(companyData.balanceSheet.accountsReceivable)}
+  - Inventory: ${formatCurrency(companyData.balanceSheet.inventory)}
+PP&E (net): ${formatCurrency(companyData.balanceSheet.ppe)}
+Goodwill: ${formatCurrency(companyData.balanceSheet.goodwill)}
+Intangible Assets: ${formatCurrency(companyData.balanceSheet.intangibleAssets)}
 
-Total Liabilities: ${(companyData.balanceSheet.totalLiabilities / 1e6).toFixed(1)}M
-Current Liabilities: ${(companyData.balanceSheet.currentLiabilities / 1e6).toFixed(1)}M
-  - Accounts Payable: ${(companyData.balanceSheet.accountsPayable / 1e6).toFixed(1)}M
-  - Short-term Debt: ${(companyData.balanceSheet.shortTermDebt / 1e6).toFixed(1)}M
-Long-term Debt: ${(companyData.balanceSheet.longTermDebt / 1e6).toFixed(1)}M
+Total Liabilities: ${formatCurrency(companyData.balanceSheet.totalLiabilities)}
+Current Liabilities: ${formatCurrency(companyData.balanceSheet.currentLiabilities)}
+  - Accounts Payable: ${formatCurrency(companyData.balanceSheet.accountsPayable)}
+  - Short-term Debt: ${formatCurrency(companyData.balanceSheet.shortTermDebt)}
+Long-term Debt: ${formatCurrency(companyData.balanceSheet.longTermDebt)}
 
-Total Equity: ${(companyData.balanceSheet.totalEquity / 1e6).toFixed(1)}M
+Total Equity: ${formatCurrency(companyData.balanceSheet.totalEquity)}
 
 CASH FLOW:
-Operating Cash Flow: ${(companyData.cashFlow.operatingCashFlow / 1e6).toFixed(1)}M
-Capital Expenditures: ${(companyData.cashFlow.capitalExpenditures / 1e6).toFixed(1)}M
-Free Cash Flow: ${(companyData.cashFlow.freeCashFlow / 1e6).toFixed(1)}M
+Operating Cash Flow: ${formatCurrency(companyData.cashFlow.operatingCashFlow)}
+Capital Expenditures: ${formatCurrency(companyData.cashFlow.capitalExpenditures)}
+Free Cash Flow: ${formatCurrency(companyData.cashFlow.freeCashFlow)}
 
 ${companyData.historicalData ? `
 HISTORICAL DATA (${companyData.historicalData.yearsAvailable} years available):
 
 Revenue Trend:
-${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: $${(yr.revenue / 1e6).toFixed(1)}M (Growth: ${yr.revenue > 0 ? 'calculated' : 'N/A'})`).join('\n')}
+${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: ${formatCurrency(yr.revenue)} (Growth: ${yr.revenue > 0 ? 'calculated' : 'N/A'})`).join('\n')}
 
 Operating Income Trend:
-${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: $${(yr.operatingIncome / 1e6).toFixed(1)}M (Margin: ${yr.revenue > 0 ? ((yr.operatingIncome / yr.revenue) * 100).toFixed(1) + '%' : 'N/A'})`).join('\n')}
+${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: ${formatCurrency(yr.operatingIncome)} (Margin: ${yr.revenue > 0 ? ((yr.operatingIncome / yr.revenue) * 100).toFixed(1) + '%' : 'N/A'})`).join('\n')}
 
 Free Cash Flow Trend:
-${companyData.historicalData.cashFlows.map(yr => `  ${yr.fiscalYear}: $${(yr.freeCashFlow / 1e6).toFixed(1)}M`).join('\n')}
+${companyData.historicalData.cashFlows.map(yr => `  ${yr.fiscalYear}: ${formatCurrency(yr.freeCashFlow)}`).join('\n')}
 
 Gross Margin Trend:
 ${companyData.historicalData.incomeStatements.map(yr => `  ${yr.fiscalYear}: ${(yr.grossMargin * 100).toFixed(1)}%`).join('\n')}
