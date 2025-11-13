@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server } from 'lucide-react';
+import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText } from 'lucide-react';
 import { parseFinancialNumber } from '../utils/formatters';
+import { loadStripe } from '@stripe/stripe-js';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
@@ -25,12 +26,38 @@ const MauboussinAIAnalyzer = () => {
     conclusion: true
   });
 
+  // Paywall state
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [analysisCount, setAnalysisCount] = useState(0);
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+  const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
   // Check backend connection on mount
   useEffect(() => {
     checkBackendConnection();
+    initializePaymentStatus();
   }, []);
+
+  // Initialize payment status from localStorage
+  const initializePaymentStatus = () => {
+    const paid = localStorage.getItem('mauboussin_paid') === 'true';
+    const count = parseInt(localStorage.getItem('mauboussin_analysis_count') || '0', 10);
+
+    setIsPaid(paid);
+    setAnalysisCount(count);
+
+    // Check if returning from successful payment
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      localStorage.setItem('mauboussin_paid', 'true');
+      setIsPaid(true);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
   const checkBackendConnection = async () => {
     try {
@@ -125,6 +152,12 @@ const MauboussinAIAnalyzer = () => {
 
     if (!backendConnected) {
       setError('Backend server not connected. Please check your connection.');
+      return;
+    }
+
+    // Check paywall: allow 1 free analysis, then require payment
+    if (!isPaid && analysisCount >= 1) {
+      setShowPaywall(true);
       return;
     }
 
@@ -385,6 +418,11 @@ const MauboussinAIAnalyzer = () => {
 
       setAnalysis(parsedAnalysis);
 
+      // Increment analysis count and save to localStorage
+      const newCount = analysisCount + 1;
+      setAnalysisCount(newCount);
+      localStorage.setItem('mauboussin_analysis_count', newCount.toString());
+
       // Step 7: Complete
       setCurrentStep(7);
       setLoadingStep('');
@@ -395,6 +433,41 @@ const MauboussinAIAnalyzer = () => {
       setLoadingStep('');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Handle payment via Stripe
+  const handlePayment = async () => {
+    try {
+      setIsProcessingPayment(true);
+
+      const currentUrl = window.location.origin + window.location.pathname;
+      const successUrl = `${currentUrl}?payment=success`;
+      const cancelUrl = currentUrl;
+
+      const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          successUrl,
+          cancelUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError('Failed to initiate payment. Please try again.');
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1045,6 +1118,95 @@ Generated: ${new Date().toLocaleString()}
           </div>
         )}
 
+        {/* Hero Section - Features Highlight */}
+        {analysis && (
+          <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
+              <p className="text-xl text-purple-100">Powered by AI + Mauboussin's proven frameworks</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Feature 1 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Calculator size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
+                <p className="text-purple-100">
+                  Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
+                </p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Shield size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
+                <p className="text-purple-100">
+                  Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
+                </p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <TrendingUp size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
+                <p className="text-purple-100">
+                  Track record analysis of earnings beats/misses and management credibility assessment
+                </p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <BarChart3 size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
+                <p className="text-purple-100">
+                  Reverse engineer market expectations and run bull/base/bear scenario analysis
+                </p>
+              </div>
+
+              {/* Feature 5 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Brain size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
+                <p className="text-purple-100">
+                  Apply base rates and skill vs. luck analysis for better investment decisions
+                </p>
+              </div>
+
+              {/* Feature 6 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
+                <p className="text-purple-100">
+                  Generate comprehensive analysis reports you can save, share, or reference later
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center mt-12">
+              <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
+                <Zap size={20} />
+                <span className="font-semibold">Instant Analysis</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">SEC Data</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">AI-Powered</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         {/* Placeholder removed - cleaner UI */}
       </div>
@@ -1085,6 +1247,88 @@ Generated: ${new Date().toLocaleString()}
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8">
+            <div className="text-center">
+              <div className="mb-6">
+                <Lock size={64} className="mx-auto text-purple-600" />
+              </div>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Unlock Unlimited Analyses
+              </h2>
+              <p className="text-xl text-gray-600 mb-2">
+                You've used your <span className="font-bold text-purple-600">1 free analysis</span>
+              </p>
+              <p className="text-gray-600 mb-8">
+                Get unlimited access with a one-time payment
+              </p>
+
+              {/* Pricing */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 mb-8">
+                <div className="flex items-baseline justify-center gap-2 mb-4">
+                  <span className="text-5xl font-bold text-gray-900">$9.99</span>
+                  <span className="text-gray-600">one-time</span>
+                </div>
+                <p className="text-gray-700 font-medium mb-6">Lifetime Unlimited Access</p>
+
+                <div className="space-y-3 text-left max-w-md mx-auto">
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Unlimited company analyses</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Complete ROIC calculations</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Moat analysis framework</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Export detailed reports</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Access forever</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessingPayment}
+                  className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                >
+                  {isProcessingPayment ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader className="animate-spin" size={20} />
+                      Processing...
+                    </div>
+                  ) : (
+                    'Get Unlimited Access - $9.99'
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowPaywall(false)}
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Maybe later
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 mt-6">
+                Secure payment powered by Stripe
+              </p>
             </div>
           </div>
         </div>
