@@ -5,9 +5,13 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
+import Stripe from 'stripe';
 // import yahooFinance from 'yahoo-finance2'; // TEMPORARILY DISABLED due to v3 API issues
 
 dotenv.config();
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 // Initialize Sentry for error monitoring (production only)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -669,6 +673,113 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`;
   }
 });
 
+// ==================== STRIPE PAYMENT ENDPOINTS ====================
+
+// Create Stripe checkout session
+app.post('/api/create-checkout-session', async (req, res) => {
+  try {
+    const { successUrl, cancelUrl } = req.body;
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(500).json({ error: 'Stripe not configured' });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Mauboussin AI Analyzer - Unlimited Access',
+              description: 'One-time payment for unlimited company analyses',
+              images: ['https://your-domain.com/logo.png'], // Optional: Add your logo URL
+            },
+            unit_amount: 999, // $9.99 in cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        product: 'unlimited_access',
+      },
+    });
+
+    res.json({ sessionId: session.id, url: session.url });
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
+// Stripe webhook handler
+app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error('Stripe webhook secret not configured');
+    return res.status(400).send('Webhook secret not configured');
+  }
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object;
+      console.log('Payment successful:', session.id);
+      // In a production app, you would:
+      // 1. Store the payment in your database
+      // 2. Associate it with a user account
+      // 3. Send confirmation email
+      break;
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('PaymentIntent was successful:', paymentIntent.id);
+      break;
+    case 'payment_intent.payment_failed':
+      const failedPayment = event.data.object;
+      console.log('Payment failed:', failedPayment.id);
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+// Verify payment status (optional - for additional security)
+app.get('/api/verify-payment/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(500).json({ error: 'Stripe not configured' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    res.json({
+      paid: session.payment_status === 'paid',
+      status: session.payment_status,
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
 // Sentry error handler (must be before any other error middleware)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.requestHandler());
@@ -684,5 +795,6 @@ app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`Alpha Vantage API key configured: ${!!process.env.ALPHA_VANTAGE_API_KEY}`);
   console.log(`Anthropic API key configured: ${!!process.env.ANTHROPIC_API_KEY}`);
+  console.log(`Stripe configured: ${!!process.env.STRIPE_SECRET_KEY}`);
   console.log(`Sentry monitoring: ${process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN ? 'enabled' : 'disabled'}`);
 });
