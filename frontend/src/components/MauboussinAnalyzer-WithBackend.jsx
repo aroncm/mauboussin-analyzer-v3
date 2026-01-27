@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Key, CheckCircle, Settings, Server } from 'lucide-react';
+import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText } from 'lucide-react';
+import { parseFinancialNumber } from '../utils/formatters';
+import { loadStripe } from '@stripe/stripe-js';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [apiKeyStored, setApiKeyStored] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps] = useState(7);
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -16,69 +19,53 @@ const MauboussinAIAnalyzer = () => {
   const [expandedSections, setExpandedSections] = useState({
     roic: true,
     moat: true,
+    earnings: true,
     expectations: true,
     probabilistic: true,
     management: true,
     conclusion: true
   });
 
-  const BACKEND_URL = 'http://localhost:3001';
+  // Paywall state
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [analysisCount, setAnalysisCount] = useState(0);
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+  const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
   // Check backend connection on mount
   useEffect(() => {
     checkBackendConnection();
-    const stored = localStorage.getItem('fmp_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setApiKeyToBackend(stored);
-    }
+    initializePaymentStatus();
   }, []);
+
+  // Initialize payment status from localStorage
+  const initializePaymentStatus = () => {
+    const paid = localStorage.getItem('mauboussin_paid') === 'true';
+    const count = parseInt(localStorage.getItem('mauboussin_analysis_count') || '0', 10);
+
+    setIsPaid(paid);
+    setAnalysisCount(count);
+
+    // Check if returning from successful payment
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      localStorage.setItem('mauboussin_paid', 'true');
+      setIsPaid(true);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
   const checkBackendConnection = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/fmp/profile/AAPL`);
-      setBackendConnected(response.ok || response.status === 400); // 400 means backend is up but no API key
+      const response = await fetch(`${BACKEND_URL}/health`);
+      setBackendConnected(response.ok);
     } catch (err) {
       setBackendConnected(false);
     }
-  };
-
-  const setApiKeyToBackend = async (key) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/set-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: key })
-      });
-      
-      if (response.ok) {
-        setApiKeyStored(true);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Failed to set API key:', err);
-      return false;
-    }
-  };
-
-  const saveApiKey = async () => {
-    if (apiKey.trim()) {
-      const success = await setApiKeyToBackend(apiKey.trim());
-      if (success) {
-        localStorage.setItem('fmp_api_key', apiKey.trim());
-        setApiKeyStored(true);
-        setShowApiKeyInput(false);
-      } else {
-        setError('Failed to configure backend. Make sure the server is running.');
-      }
-    }
-  };
-
-  const clearApiKey = () => {
-    localStorage.removeItem('fmp_api_key');
-    setApiKey('');
-    setApiKeyStored(false);
   };
 
   const toggleSection = (section) => {
@@ -88,6 +75,75 @@ const MauboussinAIAnalyzer = () => {
     }));
   };
 
+  // Autocomplete search for company names
+  const searchCompanies = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowAutocomplete(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/av/search?query=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.slice(0, 5)); // Show top 5 results
+        setShowAutocomplete(data.length > 0);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  };
+
+  // Handle input change with debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (companyInput) {
+        searchCompanies(companyInput);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [companyInput]);
+
+  // Select company from autocomplete
+  const selectCompany = (symbol, name) => {
+    setCompanyInput(`${symbol} - ${name}`);
+    setShowAutocomplete(false);
+    setSearchResults([]);
+  };
+
+  // Retry helper function for API calls
+  const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+
+        // If rate limited, wait and retry
+        if (response.status === 429) {
+          const waitTime = Math.pow(2, i) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Rate limited, retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        return response;
+      } catch (error) {
+        lastError = error;
+        console.log(`Attempt ${i + 1} failed:`, error.message);
+
+        if (i < maxRetries - 1) {
+          const waitTime = Math.pow(2, i) * 1000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    throw lastError || new Error('Max retries exceeded');
+  };
+
   const analyzeCompany = async () => {
     if (!companyInput.trim()) {
       setError('Please enter a company name or ticker symbol');
@@ -95,40 +151,47 @@ const MauboussinAIAnalyzer = () => {
     }
 
     if (!backendConnected) {
-      setError('Backend server not connected. Please start the server: npm start');
+      setError('Backend server not connected. Please check your connection.');
       return;
     }
 
-    if (!apiKeyStored) {
-      setError('Please enter your Financial Modeling Prep API key');
-      setShowApiKeyInput(true);
+    // Check paywall: allow 1 free analysis, then require payment
+    if (!isPaid && analysisCount >= 1) {
+      setShowPaywall(true);
       return;
     }
 
     setIsAnalyzing(true);
     setError(null);
     setAnalysis(null);
+    setCurrentStep(0);
+    setLoadingStep('');
 
     try {
       // Step 1: Get company ticker if name was provided
-      setLoadingStep('🔍 Looking up company ticker...');
+      setCurrentStep(1);
+      setLoadingStep('Looking up company ticker');
       let ticker = companyInput.trim().toUpperCase();
+
+      // Extract ticker if format is "AAPL - Apple Inc."
+      if (ticker.includes(' - ')) {
+        ticker = ticker.split(' - ')[0].trim();
+      }
       
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
-          const searchResponse = await fetch(
-            `${BACKEND_URL}/api/fmp/search?query=${encodeURIComponent(companyInput)}&limit=5`
+          const searchResponse = await fetchWithRetry(
+            `${BACKEND_URL}/api/av/search?query=${encodeURIComponent(companyInput)}`
           );
-          
+
           if (!searchResponse.ok) {
-            throw new Error('Failed to search for company. Check your API key and backend connection.');
+            throw new Error('Failed to search for company. Please try again.');
           }
-          
+
           const searchData = await searchResponse.json();
-          
+
           if (searchData && searchData.length > 0) {
-            ticker = searchData[0].symbol;
-            setLoadingStep(`✓ Found ticker: ${ticker}`);
+            ticker = searchData[0]['1. symbol'];
           } else {
             throw new Error('Company not found. Try using the ticker symbol directly (e.g., AAPL)');
           }
@@ -137,285 +200,209 @@ const MauboussinAIAnalyzer = () => {
         }
       }
 
-      // Step 2: Fetch company profile
-      setLoadingStep(`📊 Fetching ${ticker} company profile...`);
-      const profileResponse = await fetch(`${BACKEND_URL}/api/fmp/profile/${ticker}`);
+      // Step 2: Fetch all financial data in parallel for better performance
+      setCurrentStep(2);
+      setLoadingStep(`Fetching financial data for ${ticker}`);
 
+      const [profileResponse, incomeResponse, balanceResponse, cashFlowResponse, yahooResponse, earningsResponse] = await Promise.all([
+        fetchWithRetry(`${BACKEND_URL}/api/av/overview/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/income-statement/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/balance-sheet/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/av/cash-flow/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/yf/quote/${ticker}`),
+        fetchWithRetry(`${BACKEND_URL}/api/earnings-transcript/${ticker}`)
+      ]);
+
+      // Validate all responses
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch company profile. Check ticker symbol.');
       }
-
-      const profileData = await profileResponse.json();
-      
-      if (!profileData || profileData.length === 0) {
-        throw new Error(`No data found for ticker: ${ticker}`);
-      }
-
-      const profile = profileData[0];
-
-      // Step 3: Fetch Income Statement
-      setLoadingStep('📈 Fetching income statement from SEC filings...');
-      const incomeResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/income-statement/${ticker}?period=annual&limit=1`
-      );
-
       if (!incomeResponse.ok) {
         throw new Error('Failed to fetch income statement');
       }
-
-      const incomeData = await incomeResponse.json();
-      
-      if (!incomeData || incomeData.length === 0) {
-        throw new Error('No income statement data available');
-      }
-
-      const income = incomeData[0];
-
-      // Step 4: Fetch Balance Sheet
-      setLoadingStep('💰 Fetching balance sheet from SEC filings...');
-      const balanceResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/balance-sheet-statement/${ticker}?period=annual&limit=1`
-      );
-
       if (!balanceResponse.ok) {
         throw new Error('Failed to fetch balance sheet');
       }
-
-      const balanceData = await balanceResponse.json();
-      
-      if (!balanceData || balanceData.length === 0) {
-        throw new Error('No balance sheet data available');
-      }
-
-      const balance = balanceData[0];
-
-      // Step 5: Fetch Cash Flow
-      setLoadingStep('💵 Fetching cash flow statement...');
-      const cashFlowResponse = await fetch(
-        `${BACKEND_URL}/api/fmp/cash-flow-statement/${ticker}?period=annual&limit=1`
-      );
-
       if (!cashFlowResponse.ok) {
         throw new Error('Failed to fetch cash flow statement');
       }
+      // Yahoo Finance and earnings are optional - don't fail if they error
+      const yahooOk = yahooResponse.ok;
+      const earningsOk = earningsResponse.ok;
 
-      const cashFlowData = await cashFlowResponse.json();
-      
+      // Parse all data in parallel
+      const [profileData, incomeData, balanceData, cashFlowData, yahooData, earningsData] = await Promise.all([
+        profileResponse.json(),
+        incomeResponse.json(),
+        balanceResponse.json(),
+        cashFlowResponse.json(),
+        yahooOk ? yahooResponse.json() : Promise.resolve(null),
+        earningsOk ? earningsResponse.json() : Promise.resolve(null)
+      ]);
+
+      // Validate data
+      if (!profileData || profileData.length === 0) {
+        throw new Error(`No data found for ticker: ${ticker}`);
+      }
+      if (!incomeData || incomeData.length === 0) {
+        throw new Error('No income statement data available');
+      }
+      if (!balanceData || balanceData.length === 0) {
+        throw new Error('No balance sheet data available');
+      }
       if (!cashFlowData || cashFlowData.length === 0) {
         throw new Error('No cash flow data available');
       }
 
+      // Get current year (most recent) and historical data (up to 5 years)
+      const profile = profileData[0];
+      const income = incomeData[0];
+      const balance = balanceData[0];
       const cashFlow = cashFlowData[0];
 
-      // Step 6: Prepare financial data for analysis
+      // Get up to 5 years of historical data for trend analysis
+      const historicalIncome = incomeData.slice(0, Math.min(5, incomeData.length));
+      const historicalBalance = balanceData.slice(0, Math.min(5, balanceData.length));
+      const historicalCashFlow = cashFlowData.slice(0, Math.min(5, cashFlowData.length));
+
+      // Step 3: Parse and validate financial data
+      setCurrentStep(3);
+      setLoadingStep('Parsing financial data');
+
+      // Helper function to convert Alpha Vantage's "None" strings to 0
+      const parseNumber = (value) => {
+        if (value === "None" || value === null || value === undefined || value === "") {
+          return 0;
+        }
+        return parseFloat(value) || 0;
+      };
+
+      // Step 4: Prepare financial data for analysis
+      setCurrentStep(4);
+      setLoadingStep('Preparing financial data');
+
       const financialData = {
-        companyName: profile.companyName,
+        companyName: profile.Name,
         ticker: ticker,
-        industry: profile.industry || profile.sector,
-        description: profile.description,
-        fiscalPeriod: income.calendarYear,
-        currency: profile.currency || 'USD',
-        
+        industry: profile.Industry || profile.Sector,
+        description: profile.Description,
+        fiscalPeriod: income.fiscalDateEnding,
+        currency: profile.Currency || 'USD',
+
+        // Market data from Alpha Vantage
+        marketData: {
+          marketCap: parseFinancialNumber(profile.MarketCapitalization),
+          beta: parseFloat(profile.Beta) || null,
+          trailingPE: parseFloat(profile.PERatio) || null,
+          forwardPE: parseFloat(profile.ForwardPE) || null,
+          priceToBook: parseFloat(profile.PriceToBookRatio) || null,
+          fiftyTwoWeekHigh: parseFloat(profile['52WeekHigh']) || null,
+          fiftyTwoWeekLow: parseFloat(profile['52WeekLow']) || null,
+          sharesOutstanding: parseFinancialNumber(profile.SharesOutstanding),
+          // Note: enterpriseValue and currentPrice not available from Alpha Vantage
+          enterpriseValue: null,
+          currentPrice: null
+        },
+
+        // Recent earnings data for qualitative analysis
+        earningsData: earningsData ? {
+          quarterlyEarnings: earningsData.quarterlyEarnings?.slice(0, 4) || [], // Last 4 quarters
+          annualEarnings: earningsData.annualEarnings?.slice(0, 3) || [] // Last 3 years
+        } : null,
+
         incomeStatement: {
-          revenue: income.revenue,
-          costOfRevenue: income.costOfRevenue,
-          grossProfit: income.grossProfit,
-          operatingExpenses: income.operatingExpenses,
-          operatingIncome: income.operatingIncome,
-          ebitda: income.ebitda,
-          ebit: income.ebitda - (income.depreciationAndAmortization || 0),
-          interestExpense: income.interestExpense,
-          taxExpense: income.incomeTaxExpense,
-          netIncome: income.netIncome,
-          taxRate: income.incomeBeforeTax !== 0 ? income.incomeTaxExpense / income.incomeBeforeTax : 0.21
+          revenue: parseNumber(income.totalRevenue),
+          costOfRevenue: parseNumber(income.costOfRevenue),
+          grossProfit: parseNumber(income.grossProfit),
+          operatingExpenses: parseNumber(income.operatingExpenses),
+          operatingIncome: parseNumber(income.operatingIncome),
+          ebitda: parseNumber(income.ebitda),
+          ebit: parseNumber(income.ebit),
+          interestExpense: parseNumber(income.interestExpense),
+          taxExpense: parseNumber(income.incomeTaxExpense),
+          netIncome: parseNumber(income.netIncome),
+          taxRate: parseNumber(income.incomeBeforeTax) !== 0 
+            ? parseNumber(income.incomeTaxExpense) / parseNumber(income.incomeBeforeTax) 
+            : 0.21
         },
         
         balanceSheet: {
-          totalAssets: balance.totalAssets,
-          currentAssets: balance.totalCurrentAssets,
-          cash: balance.cashAndCashEquivalents,
-          accountsReceivable: balance.netReceivables,
-          inventory: balance.inventory,
-          ppe: balance.propertyPlantEquipmentNet,
-          goodwill: balance.goodwill || 0,
-          intangibleAssets: balance.intangibleAssets || 0,
+          totalAssets: parseNumber(balance.totalAssets),
+          currentAssets: parseNumber(balance.totalCurrentAssets),
+          cash: parseNumber(balance.cashAndCashEquivalentsAtCarryingValue),
+          accountsReceivable: parseNumber(balance.currentNetReceivables),
+          inventory: parseNumber(balance.inventory),
+          ppe: parseNumber(balance.propertyPlantEquipment),
+          goodwill: parseNumber(balance.goodwill),
+          intangibleAssets: parseNumber(balance.intangibleAssets),
           
-          totalLiabilities: balance.totalLiabilities,
-          currentLiabilities: balance.totalCurrentLiabilities,
-          accountsPayable: balance.accountPayables,
-          shortTermDebt: balance.shortTermDebt || 0,
-          longTermDebt: balance.longTermDebt || 0,
+          totalLiabilities: parseNumber(balance.totalLiabilities),
+          currentLiabilities: parseNumber(balance.totalCurrentLiabilities),
+          accountsPayable: parseNumber(balance.currentAccountsPayable),
+          shortTermDebt: parseNumber(balance.shortTermDebt),
+          longTermDebt: parseNumber(balance.shortLongTermDebtTotal) - parseNumber(balance.shortTermDebt),
           
-          totalEquity: balance.totalStockholdersEquity
+          totalEquity: parseNumber(balance.totalShareholderEquity)
         },
         
         cashFlow: {
-          operatingCashFlow: cashFlow.operatingCashFlow,
-          capitalExpenditures: Math.abs(cashFlow.capitalExpenditure || 0),
-          freeCashFlow: cashFlow.freeCashFlow
+          operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
+          capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
+          freeCashFlow: parseNumber(cashFlow.operatingCashflow) - Math.abs(parseNumber(cashFlow.capitalExpenditures))
+        },
+
+        // Historical data for trend analysis (up to 5 years)
+        historicalData: {
+          yearsAvailable: historicalIncome.length,
+          incomeStatements: historicalIncome.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            revenue: parseNumber(yr.totalRevenue),
+            operatingIncome: parseNumber(yr.operatingIncome),
+            ebit: parseNumber(yr.ebit),
+            netIncome: parseNumber(yr.netIncome),
+            grossMargin: parseNumber(yr.grossProfit) / parseNumber(yr.totalRevenue)
+          })),
+          balanceSheets: historicalBalance.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            totalAssets: parseNumber(yr.totalAssets),
+            totalEquity: parseNumber(yr.totalShareholderEquity),
+            totalDebt: parseNumber(yr.shortLongTermDebtTotal),
+            ppe: parseNumber(yr.propertyPlantEquipment)
+          })),
+          cashFlows: historicalCashFlow.map(yr => ({
+            fiscalYear: yr.fiscalDateEnding,
+            operatingCashFlow: parseNumber(yr.operatingCashflow),
+            capex: Math.abs(parseNumber(yr.capitalExpenditures)),
+            freeCashFlow: parseNumber(yr.operatingCashflow) - Math.abs(parseNumber(yr.capitalExpenditures))
+          }))
         }
       };
 
-      // Step 7: Perform Mauboussin Analysis using Claude API
-      setLoadingStep('🧮 Calculating ROIC and applying Mauboussin framework...');
-      
-      const analysisResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      // Step 5: Calculate ROIC metrics
+      setCurrentStep(5);
+      setLoadingStep('Calculating ROIC metrics');
+
+      // Step 6: Perform AI analysis
+      setCurrentStep(6);
+      setLoadingStep('Performing AI analysis with Mauboussin framework');
+
+      const analysisResponse = await fetchWithRetry(`${BACKEND_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          messages: [
-            {
-              role: "user",
-              content: `You are a strategic analyst using Michael Mauboussin's investment frameworks.
-
-=== FINANCIAL DATA FROM SEC FILING (via FMP API) ===
-
-Company: ${financialData.companyName} (${financialData.ticker})
-Industry: ${financialData.industry}
-Fiscal Year: ${financialData.fiscalPeriod}
-Currency: ${financialData.currency}
-
-INCOME STATEMENT:
-Revenue: ${(financialData.incomeStatement.revenue / 1e6).toFixed(1)}M
-Cost of Revenue: ${(financialData.incomeStatement.costOfRevenue / 1e6).toFixed(1)}M
-Gross Profit: ${(financialData.incomeStatement.grossProfit / 1e6).toFixed(1)}M
-Operating Expenses: ${(financialData.incomeStatement.operatingExpenses / 1e6).toFixed(1)}M
-Operating Income: ${(financialData.incomeStatement.operatingIncome / 1e6).toFixed(1)}M
-EBIT: ${(financialData.incomeStatement.ebit / 1e6).toFixed(1)}M
-Interest Expense: ${(financialData.incomeStatement.interestExpense / 1e6).toFixed(1)}M
-Tax Expense: ${(financialData.incomeStatement.taxExpense / 1e6).toFixed(1)}M
-Net Income: ${(financialData.incomeStatement.netIncome / 1e6).toFixed(1)}M
-Effective Tax Rate: ${(financialData.incomeStatement.taxRate * 100).toFixed(1)}%
-
-BALANCE SHEET:
-Total Assets: ${(financialData.balanceSheet.totalAssets / 1e6).toFixed(1)}M
-Current Assets: ${(financialData.balanceSheet.currentAssets / 1e6).toFixed(1)}M
-  - Cash: ${(financialData.balanceSheet.cash / 1e6).toFixed(1)}M
-  - Accounts Receivable: ${(financialData.balanceSheet.accountsReceivable / 1e6).toFixed(1)}M
-  - Inventory: ${(financialData.balanceSheet.inventory / 1e6).toFixed(1)}M
-PP&E (net): ${(financialData.balanceSheet.ppe / 1e6).toFixed(1)}M
-Goodwill: ${(financialData.balanceSheet.goodwill / 1e6).toFixed(1)}M
-Intangible Assets: ${(financialData.balanceSheet.intangibleAssets / 1e6).toFixed(1)}M
-
-Total Liabilities: ${(financialData.balanceSheet.totalLiabilities / 1e6).toFixed(1)}M
-Current Liabilities: ${(financialData.balanceSheet.currentLiabilities / 1e6).toFixed(1)}M
-  - Accounts Payable: ${(financialData.balanceSheet.accountsPayable / 1e6).toFixed(1)}M
-  - Short-term Debt: ${(financialData.balanceSheet.shortTermDebt / 1e6).toFixed(1)}M
-Long-term Debt: ${(financialData.balanceSheet.longTermDebt / 1e6).toFixed(1)}M
-
-Total Equity: ${(financialData.balanceSheet.totalEquity / 1e6).toFixed(1)}M
-
-CASH FLOW:
-Operating Cash Flow: ${(financialData.cashFlow.operatingCashFlow / 1e6).toFixed(1)}M
-Capital Expenditures: ${(financialData.cashFlow.capitalExpenditures / 1e6).toFixed(1)}M
-Free Cash Flow: ${(financialData.cashFlow.freeCashFlow / 1e6).toFixed(1)}M
-
-=== YOUR TASK ===
-
-Perform a complete Mauboussin competitive analysis. Calculate ROIC precisely using the data above.
-
-CRITICAL: Show all mathematical steps clearly. Use the actual numbers provided.
-
-Your response MUST be valid JSON in this EXACT format (no additional text, no markdown, no code blocks):
-
-{
-  "companyName": "${financialData.companyName}",
-  "ticker": "${financialData.ticker}",
-  "businessModel": "2-3 sentence description of how the company makes money",
-  "industry": "${financialData.industry}",
-  "fiscalYear": "${financialData.fiscalPeriod}",
-  
-  "roicAnalysis": {
-    "nopat": {
-      "ebit": "Number in millions",
-      "taxRate": "Percentage",
-      "nopatCalculated": "EBIT × (1 - tax rate) in millions",
-      "calculationShown": "Show step: EBIT $X × (1 - Y%) = NOPAT $Z"
-    },
-    "investedCapital": {
-      "method": "Operating approach: NWC + Net Fixed Assets",
-      "currentAssets": "Number in millions",
-      "currentLiabilities": "Number in millions",
-      "netWorkingCapital": "Current Assets - Current Liabilities",
-      "ppe": "PP&E in millions",
-      "goodwill": "Goodwill in millions",
-      "intangibles": "Intangibles in millions",
-      "totalIC": "Sum of components",
-      "calculationShown": "Show: NWC $X + PP&E $Y + Goodwill $Z = IC $Total",
-      "alternativeMethod": "Also show: Equity + Debt - Excess Cash"
-    },
-    "roicCalculated": {
-      "percentage": "ROIC as percentage",
-      "calculation": "NOPAT / IC = X%",
-      "interpretation": "Assessment vs industry and cost of capital"
-    },
-    "dupontDecomposition": {
-      "profitMargin": "NOPAT / Revenue as %",
-      "capitalTurnover": "Revenue / IC as ratio",
-      "validation": "Margin × Turnover = ROIC (validate)",
-      "strategyInsight": "High margin (differentiation) or high turnover (cost leadership)?"
-    },
-    "valueCreation": {
-      "estimatedWACC": "Estimate 8-12% for this industry",
-      "spread": "ROIC - WACC",
-      "verdict": "Creating/destroying value?",
-      "context": "How does moat enable this ROIC?"
-    },
-    "historicalTrend": "Is ROIC improving or declining? (mention if you need more years)",
-    "dataQuality": "Confidence in the calculations (high/medium/low)"
-  },
-  
-  "moatAnalysis": {
-    "moatType": "Network effects / Scale / Intangibles / Switching costs / Cost advantages",
-    "moatStrength": "Wide / Narrow / None with justification",
-    "evidenceForMoat": "Specific financial evidence (margins, market position, pricing power)",
-    "moatDurability": "How long can this moat last? Risks?",
-    "linkToROIC": "How does moat create the ROIC observed?"
-  },
-  
-  "expectationsAnalysis": {
-    "impliedExpectations": "What growth/ROIC is market pricing in?",
-    "currentValuation": "P/E or EV/EBITDA if you can estimate",
-    "scenarioAnalysis": "Bull / Base / Bear cases with assumptions",
-    "probabilityWeighted": "Weight the scenarios"
-  },
-  
-  "probabilistic": {
-    "baseRates": "What % of companies in this industry sustain high ROIC?",
-    "skillVsLuck": "How much is replicable skill vs luck?",
-    "keyUncertainties": "Top 2-3 uncertainties"
-  },
-  
-  "management": {
-    "capitalAllocation": "Track record and quality",
-    "strategicThinking": "Evidence of long-term focus",
-    "overallAssessment": "Trust them with capital?"
-  },
-  
-  "conclusion": {
-    "investmentThesis": "3-5 sentence thesis",
-    "keyRisks": "Top 3 risks",
-    "whatWouldChange": "What would change your view?",
-    "recommendation": "Context-dependent recommendation"
-  }
-}
-
-CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`
-            }
-          ]
+          companyData: financialData
         })
       });
 
       if (!analysisResponse.ok) {
-        throw new Error(`Analysis failed: ${analysisResponse.status}`);
+        const errorData = await analysisResponse.json();
+        throw new Error(errorData.error || `Analysis failed: ${analysisResponse.status}`);
       }
 
       const analysisData = await analysisResponse.json();
-      let analysisText = analysisData.content[0].text;
+      let analysisText = analysisData.analysis;
       
       // Strip markdown if present
       analysisText = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -430,13 +417,57 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`
       }
 
       setAnalysis(parsedAnalysis);
-      setLoadingStep('✓ Analysis complete!');
+
+      // Increment analysis count and save to localStorage
+      const newCount = analysisCount + 1;
+      setAnalysisCount(newCount);
+      localStorage.setItem('mauboussin_analysis_count', newCount.toString());
+
+      // Step 7: Complete
+      setCurrentStep(7);
+      setLoadingStep('');
 
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err.message || 'An error occurred during analysis. Please try again.');
+      setLoadingStep('');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Handle payment via Stripe
+  const handlePayment = async () => {
+    try {
+      setIsProcessingPayment(true);
+
+      const currentUrl = window.location.origin + window.location.pathname;
+      const successUrl = `${currentUrl}?payment=success`;
+      const cancelUrl = currentUrl;
+
+      const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          successUrl,
+          cancelUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError('Failed to initiate payment. Please try again.');
+      setIsProcessingPayment(false);
     }
   };
 
@@ -448,7 +479,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`
 ║   MAUBOUSSIN COMPETITIVE ANALYSIS - CALCULATED ROIC               ║
 ║   ${analysis.companyName} (${analysis.ticker})                    ║
 ║   Fiscal Year: ${analysis.fiscalYear}                             ║
-║   Data Source: SEC Filings via Financial Modeling Prep           ║
+║   Data Source: SEC Filings via Alpha Vantage API                 ║
 ╚════════════════════════════════════════════════════════════════════╝
 
 📊 BUSINESS OVERVIEW
@@ -521,26 +552,51 @@ Context: ${analysis.roicAnalysis.valueCreation.context}
 
 Type: ${analysis.moatAnalysis.moatType}
 Strength: ${analysis.moatAnalysis.moatStrength}
+${analysis.moatAnalysis.moatStrengthRating ? `Rating: ${analysis.moatAnalysis.moatStrengthRating}/10` : ''}
+${analysis.moatAnalysis.supplyOrDemandAdvantage ? `Supply/Demand Advantage: ${analysis.moatAnalysis.supplyOrDemandAdvantage}` : ''}
 
 Evidence: ${analysis.moatAnalysis.evidenceForMoat}
 
 Durability: ${analysis.moatAnalysis.moatDurability}
+${analysis.moatAnalysis.threatsToMoat ? `\nThreats: ${analysis.moatAnalysis.threatsToMoat}` : ''}
 
 Link to ROIC: ${analysis.moatAnalysis.linkToROIC}
+${analysis.moatAnalysis.comparativeMoat ? `\nComparative Moat: ${analysis.moatAnalysis.comparativeMoat}` : ''}
+${analysis.moatAnalysis.measurability ? `\nMeasurability: ${analysis.moatAnalysis.measurability}` : ''}
+
+${analysis.earningsCallSentiment ? `
+═══════════════════════════════════════════════════════════════════════
+3️⃣  EARNINGS CALL SENTIMENT
+═══════════════════════════════════════════════════════════════════════
+
+Overall Sentiment: ${analysis.earningsCallSentiment.overallSentiment}
+Beat/Miss Pattern: ${analysis.earningsCallSentiment.beatMissPattern}
+Management Credibility: ${analysis.earningsCallSentiment.managementCredibility}
+Earnings Quality: ${analysis.earningsCallSentiment.earningsQuality}
+Forward Guidance: ${analysis.earningsCallSentiment.forwardGuidance}
+Red Flags: ${analysis.earningsCallSentiment.redFlags}
+Positive Signals: ${analysis.earningsCallSentiment.positiveSignals}
+Sentiment Score: ${analysis.earningsCallSentiment.sentimentScore}/10
+` : ''}
 
 ═══════════════════════════════════════════════════════════════════════
-3️⃣  EXPECTATIONS INVESTING
+4️⃣  EXPECTATIONS INVESTING
 ═══════════════════════════════════════════════════════════════════════
 
 Implied Expectations: ${analysis.expectationsAnalysis.impliedExpectations}
 Valuation: ${analysis.expectationsAnalysis.currentValuation}
 
-Scenarios: ${analysis.expectationsAnalysis.scenarioAnalysis}
+Scenarios:
+${typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null
+  ? `  Bull: ${analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}
+  Base: ${analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}
+  Bear: ${analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}`
+  : analysis.expectationsAnalysis.scenarioAnalysis}
 
 Probability Weighted: ${analysis.expectationsAnalysis.probabilityWeighted}
 
 ═══════════════════════════════════════════════════════════════════════
-4️⃣  PROBABILISTIC THINKING
+5️⃣  PROBABILISTIC THINKING
 ═══════════════════════════════════════════════════════════════════════
 
 Base Rates: ${analysis.probabilistic.baseRates}
@@ -550,7 +606,7 @@ Skill vs Luck: ${analysis.probabilistic.skillVsLuck}
 Key Uncertainties: ${analysis.probabilistic.keyUncertainties}
 
 ═══════════════════════════════════════════════════════════════════════
-5️⃣  MANAGEMENT QUALITY
+6️⃣  MANAGEMENT QUALITY
 ═══════════════════════════════════════════════════════════════════════
 
 Capital Allocation: ${analysis.management.capitalAllocation}
@@ -560,7 +616,7 @@ Strategic Thinking: ${analysis.management.strategicThinking}
 Assessment: ${analysis.management.overallAssessment}
 
 ═══════════════════════════════════════════════════════════════════════
-6️⃣  INVESTMENT CONCLUSION
+7️⃣  INVESTMENT CONCLUSION
 ═══════════════════════════════════════════════════════════════════════
 
 💡 Thesis: ${analysis.conclusion.investmentThesis}
@@ -572,7 +628,7 @@ Assessment: ${analysis.management.overallAssessment}
 📊 Recommendation: ${analysis.conclusion.recommendation}
 
 ═══════════════════════════════════════════════════════════════════════
-Data: SEC Filings via Financial Modeling Prep API
+Data: SEC Filings via Alpha Vantage API
 Analysis: Mauboussin Competitive Framework
 Generated: ${new Date().toLocaleString()}
 `;
@@ -600,129 +656,109 @@ Generated: ${new Date().toLocaleString()}
             </h1>
           </div>
           <p className="text-xl text-gray-600 mb-2">Automated SEC Financial Analysis with Real ROIC</p>
-          <p className="text-sm text-gray-500">Powered by FMP API + Local Backend</p>
+          <p className="text-sm text-gray-500">Powered by Alpha Vantage API + Claude Analysis</p>
         </div>
 
-        {/* Backend Status */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-4 border-2 border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Error notification only when backend is down */}
+        {!backendConnected && (
+          <div className="bg-red-50 rounded-2xl shadow-lg p-6 mb-8 border-2 border-red-200">
             <div className="flex items-center gap-3">
-              <Server size={24} className={backendConnected ? 'text-green-600' : 'text-red-600'} />
+              <Server size={24} className="text-red-600" />
               <div>
-                <span className={`font-medium ${backendConnected ? 'text-green-700' : 'text-red-700'}`}>
-                  Backend Server: {backendConnected ? 'Connected' : 'Not Connected'}
+                <span className="font-medium text-red-700">
+                  Unable to connect to analysis server
                 </span>
-                {!backendConnected && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Run: <code className="bg-gray-100 px-2 py-1 rounded">npm start</code> in the backend folder
-                  </p>
-                )}
+                <p className="text-sm text-gray-600 mt-1">
+                  Please try again later or contact support if the issue persists
+                </p>
               </div>
             </div>
-            <button
-              onClick={checkBackendConnection}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-            >
-              Retry Connection
-            </button>
           </div>
-        </div>
-
-        {/* API Key Settings */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-purple-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {apiKeyStored ? (
-                <>
-                  <CheckCircle size={24} className="text-green-600" />
-                  <span className="text-green-700 font-medium">FMP API Key Configured</span>
-                </>
-              ) : (
-                <>
-                  <Key size={24} className="text-orange-600" />
-                  <span className="text-orange-700 font-medium">FMP API Key Required</span>
-                </>
-              )}
-            </div>
-            <button
-              onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <Settings size={18} />
-              {apiKeyStored ? 'Change Key' : 'Add Key'}
-            </button>
-          </div>
-          
-          {showApiKeyInput && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-3">
-                Get your free API key at <a href="https://financialmodelingprep.com/developer" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Financial Modeling Prep</a> (250 requests/day free)
-              </p>
-              <div className="flex gap-3">
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your FMP API key"
-                  className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
-                />
-                <button
-                  onClick={saveApiKey}
-                  disabled={!backendConnected}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
-                {apiKeyStored && (
-                  <button
-                    onClick={clearApiKey}
-                    className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Search Box */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={companyInput}
-              onChange={(e) => setCompanyInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
-              placeholder="Enter company name or ticker (e.g., Braze or BRZE)"
-              disabled={isAnalyzing}
-              className="flex-1 px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
-            />
-            <button
-              onClick={analyzeCompany}
-              disabled={isAnalyzing || !companyInput.trim() || !backendConnected || !apiKeyStored}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader className="animate-spin" size={24} />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Search size={24} />
-                  Analyze
-                </>
-              )}
-            </button>
-          </div>
-          
-          {loadingStep && (
-            <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Loader className="animate-spin text-blue-600" size={20} />
-                <span className="text-blue-800 font-medium">{loadingStep}</span>
+          <div className="relative">
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={companyInput}
+                  onChange={(e) => setCompanyInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
+                  onFocus={() => searchResults.length > 0 && setShowAutocomplete(true)}
+                  placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
+                  disabled={isAnalyzing}
+                  className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
+                />
+
+                {/* Autocomplete dropdown */}
+                {showAutocomplete && searchResults.length > 0 && !isAnalyzing && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-xl z-10 max-h-64 overflow-y-auto">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectCompany(result['1. symbol'], result['2. name'])}
+                        className="w-full px-6 py-3 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-semibold text-gray-800">{result['1. symbol']}</div>
+                        <div className="text-sm text-gray-600">{result['2. name']}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              <button
+                onClick={analyzeCompany}
+                disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader className="animate-spin" size={24} />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Search size={24} />
+                    Analyze
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Progress indicator - only show during analysis */}
+          {isAnalyzing && (
+            <div className="mt-6">
+              {/* Progress bar */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Step {currentStep} of {totalSteps}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {Math.round((currentStep / totalSteps) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Current step description */}
+              {loadingStep && (
+                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Loader className="animate-spin text-blue-600" size={20} />
+                    <span className="text-blue-800 font-medium">{loadingStep}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -740,7 +776,7 @@ Generated: ${new Date().toLocaleString()}
           </div>
         )}
 
-        {/* Analysis Results - Same as before, keeping the full UI */}
+        {/* Analysis Results */}
         {analysis && (
           <div className="space-y-8">
             {/* Company Overview */}
@@ -752,13 +788,323 @@ Generated: ${new Date().toLocaleString()}
                   <p className="text-gray-600">{analysis.ticker} | {analysis.industry}</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Fiscal Year: {analysis.fiscalYear} | Data: SEC via FMP API</p>
+              <p className="text-sm text-gray-500 mb-4">Fiscal Year: {analysis.fiscalYear} | Data: SEC via Alpha Vantage API</p>
               <p className="text-gray-700 text-lg leading-relaxed">{analysis.businessModel}</p>
             </div>
 
-            {/* All other sections remain the same... */}
-            {/* ROIC section, Moat section, etc. - keeping them as-is from the previous version */}
-            
+            {/* ROIC Analysis */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('roic')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Calculator size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">ROIC Analysis</h3>
+                </div>
+                {expandedSections.roic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.roic && (
+                <div className="p-8 space-y-6">
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-blue-900 mb-3">NOPAT Calculation</h4>
+                    <p className="text-gray-700 mb-2"><strong>EBIT:</strong> {analysis.roicAnalysis.nopat.ebit}</p>
+                    <p className="text-gray-700 mb-2"><strong>Tax Rate:</strong> {analysis.roicAnalysis.nopat.taxRate}</p>
+                    <p className="text-gray-700 mb-3">{analysis.roicAnalysis.nopat.calculationShown}</p>
+                    <p className="text-xl font-bold text-blue-900">NOPAT = {analysis.roicAnalysis.nopat.nopatCalculated}</p>
+                  </div>
+
+                  <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-green-900 mb-3">Invested Capital</h4>
+                    <p className="text-gray-700 mb-3"><strong>Method:</strong> {analysis.roicAnalysis.investedCapital.method}</p>
+                    <p className="text-gray-700 mb-2">{analysis.roicAnalysis.investedCapital.calculationShown}</p>
+                    <p className="text-xl font-bold text-green-900 mt-4">Total IC = {analysis.roicAnalysis.investedCapital.totalIC}</p>
+                    <p className="text-sm text-gray-600 mt-3"><strong>Alternative:</strong> {analysis.roicAnalysis.investedCapital.alternativeMethod}</p>
+                  </div>
+
+                  <div className="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-purple-900 mb-3">ROIC Result</h4>
+                    <p className="text-gray-700 mb-2">{analysis.roicAnalysis.roicCalculated.calculation}</p>
+                    <p className="text-3xl font-bold text-purple-900 my-4">ROIC = {analysis.roicAnalysis.roicCalculated.percentage}</p>
+                    <p className="text-gray-700">{analysis.roicAnalysis.roicCalculated.interpretation}</p>
+                  </div>
+
+                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+                    <h4 className="font-bold text-lg text-yellow-900 mb-3">Value Creation Test</h4>
+                    <p className="text-gray-700 mb-2"><strong>Estimated WACC:</strong> {analysis.roicAnalysis.valueCreation.estimatedWACC}</p>
+                    <p className="text-gray-700 mb-2"><strong>Economic Spread:</strong> {analysis.roicAnalysis.valueCreation.spread}</p>
+                    <p className="text-xl font-bold text-yellow-900 my-3">{analysis.roicAnalysis.valueCreation.verdict}</p>
+                    <p className="text-gray-700">{analysis.roicAnalysis.valueCreation.context}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Moat Analysis */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('moat')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Competitive Moat Analysis</h3>
+                </div>
+                {expandedSections.moat ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.moat && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Moat Type:</p>
+                    <p className="text-gray-800 text-lg">{analysis.moatAnalysis.moatType}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Moat Strength:</p>
+                    <p className="text-gray-800 text-lg font-bold">{analysis.moatAnalysis.moatStrength}</p>
+                  </div>
+                  {analysis.moatAnalysis.moatStrengthRating && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Moat Strength Rating:</p>
+                      <p className="text-gray-800 text-lg font-bold">{analysis.moatAnalysis.moatStrengthRating}/10</p>
+                    </div>
+                  )}
+                  {analysis.moatAnalysis.supplyOrDemandAdvantage && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Supply/Demand Advantage:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.supplyOrDemandAdvantage}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Evidence:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.evidenceForMoat}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Durability:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.moatDurability}</p>
+                  </div>
+                  {analysis.moatAnalysis.threatsToMoat && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Threats to Moat:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.threatsToMoat}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Link to ROIC:</p>
+                    <p className="text-gray-800">{analysis.moatAnalysis.linkToROIC}</p>
+                  </div>
+                  {analysis.moatAnalysis.comparativeMoat && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Comparative Moat:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.comparativeMoat}</p>
+                    </div>
+                  )}
+                  {analysis.moatAnalysis.measurability && (
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Measurability:</p>
+                      <p className="text-gray-800">{analysis.moatAnalysis.measurability}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Earnings Call Sentiment */}
+            {analysis.earningsCallSentiment && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('earnings')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <TrendingUp size={28} className="text-green-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
+                  </div>
+                  {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.earnings && (
+                  <div className="p-8 space-y-4">
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Expectations Investing */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('expectations')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
+                </div>
+                {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.expectations && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
+                    <div className="text-gray-800">
+                      {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
+                        <div className="space-y-1">
+                          <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
+                          <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
+                          <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Probabilistic Thinking */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('probabilistic')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Target size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
+                </div>
+                {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.probabilistic && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Management Quality */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('management')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Users size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
+                </div>
+                {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.management && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
+                    <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
+                    <p className="text-gray-800">{analysis.management.strategicThinking}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
+                    <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Investment Conclusion */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('conclusion')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Brain size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
+                </div>
+                {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+              
+              {expandedSections.conclusion && (
+                <div className="p-8 space-y-6">
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                    <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
+                    <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
+                    <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
+                    <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
+                    <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Export Button */}
             <div className="flex justify-center pt-4">
               <button
@@ -772,43 +1118,97 @@ Generated: ${new Date().toLocaleString()}
           </div>
         )}
 
-        {/* Footer */}
-        {!isAnalyzing && !analysis && (
-          <div className="text-center mt-12 space-y-6">
-            <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-purple-200">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">🚀 Setup Instructions</h3>
-              <div className="text-left space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">1</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Start the Backend Server</h4>
-                    <p className="text-sm text-gray-600">Run <code className="bg-gray-100 px-2 py-1 rounded">npm start</code> in the backend folder</p>
-                  </div>
+        {/* Hero Section - Features Highlight */}
+        {analysis && (
+          <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
+              <p className="text-xl text-purple-100">Powered by AI + Mauboussin's proven frameworks</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Feature 1 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Calculator size={32} />
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">2</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Add Your FMP API Key</h4>
-                    <p className="text-sm text-gray-600">Click "Add Key" above and paste your Financial Modeling Prep API key</p>
-                  </div>
+                <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
+                <p className="text-purple-100">
+                  Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
+                </p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Shield size={32} />
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-purple-600">3</div>
-                  <div>
-                    <h4 className="font-bold text-gray-800">Start Analyzing</h4>
-                    <p className="text-sm text-gray-600">Enter any company name or ticker symbol and get complete analysis</p>
-                  </div>
+                <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
+                <p className="text-purple-100">
+                  Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
+                </p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <TrendingUp size={32} />
                 </div>
+                <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
+                <p className="text-purple-100">
+                  Track record analysis of earnings beats/misses and management credibility assessment
+                </p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <BarChart3 size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
+                <p className="text-purple-100">
+                  Reverse engineer market expectations and run bull/base/bear scenario analysis
+                </p>
+              </div>
+
+              {/* Feature 5 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Brain size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
+                <p className="text-purple-100">
+                  Apply base rates and skill vs. luck analysis for better investment decisions
+                </p>
+              </div>
+
+              {/* Feature 6 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
+                <p className="text-purple-100">
+                  Generate comprehensive analysis reports you can save, share, or reference later
+                </p>
               </div>
             </div>
-            
-            <blockquote className="text-gray-600 italic text-lg">
-              "The big money is not in the buying or selling, but in the waiting."
-              <br />
-              <span className="text-gray-500 text-base">— Charlie Munger</span>
-            </blockquote>
+
+            <div className="text-center mt-12">
+              <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
+                <Zap size={20} />
+                <span className="font-semibold">Instant Analysis</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">SEC Data</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">AI-Powered</span>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Footer */}
+        {/* Placeholder removed - cleaner UI */}
       </div>
 
       {/* Export Modal */}
@@ -847,6 +1247,88 @@ Generated: ${new Date().toLocaleString()}
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8">
+            <div className="text-center">
+              <div className="mb-6">
+                <Lock size={64} className="mx-auto text-purple-600" />
+              </div>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Unlock Unlimited Analyses
+              </h2>
+              <p className="text-xl text-gray-600 mb-2">
+                You've used your <span className="font-bold text-purple-600">1 free analysis</span>
+              </p>
+              <p className="text-gray-600 mb-8">
+                Get unlimited access with a one-time payment
+              </p>
+
+              {/* Pricing */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 mb-8">
+                <div className="flex items-baseline justify-center gap-2 mb-4">
+                  <span className="text-5xl font-bold text-gray-900">$9.99</span>
+                  <span className="text-gray-600">one-time</span>
+                </div>
+                <p className="text-gray-700 font-medium mb-6">Lifetime Unlimited Access</p>
+
+                <div className="space-y-3 text-left max-w-md mx-auto">
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Unlimited company analyses</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Complete ROIC calculations</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Moat analysis framework</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Export detailed reports</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check size={20} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Access forever</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessingPayment}
+                  className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                >
+                  {isProcessingPayment ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader className="animate-spin" size={20} />
+                      Processing...
+                    </div>
+                  ) : (
+                    'Get Unlimited Access - $9.99'
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowPaywall(false)}
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Maybe later
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 mt-6">
+                Secure payment powered by Stripe
+              </p>
             </div>
           </div>
         </div>
