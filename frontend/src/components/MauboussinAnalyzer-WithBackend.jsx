@@ -920,6 +920,8 @@ Generated: ${new Date().toLocaleString()}
                   )}
                 </div>
               )}
+
+
               {/* Capital Allocation & Base Rates */}
               {analysis.capitalAllocation && (
                 <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
@@ -983,497 +985,432 @@ Generated: ${new Date().toLocaleString()}
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Capital Allocation & Base Rates */}
-            {analysis.capitalAllocation && (
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('capitalAllocation')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <PieChart size={28} className="text-orange-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Capital Allocation & Base Rates</h3>
-                  </div>
-                  {expandedSections.capitalAllocation ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                </button>
+              {/* Earnings Call Sentiment */}
+              {analysis.earningsCallSentiment && (
+                <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('earnings')}
+                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TrendingUp size={28} className="text-green-600" />
+                      <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
+                    </div>
+                    {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  </button>
 
-                {expandedSections.capitalAllocation && (
-                  <div className="p-8 space-y-6">
-                    {/* Capital Allocation Breakdown */}
-                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
-                      <h4 className="font-bold text-lg text-orange-900 mb-4">Uses of Cash Analysis</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-gray-600 mb-1">Total Operating Cash Flow:</p>
-                          <p className="text-xl font-bold text-gray-900">{analysis.capitalAllocation.operatingCashFlow}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">CapEx (Reinvestment):</span>
-                            <span className="font-medium">{analysis.capitalAllocation.capex}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Acquisitions (Inorganic):</span>
-                            <span className="font-medium">{analysis.capitalAllocation.acquisitions}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Stock Buybacks:</span>
-                            <span className="font-medium">{analysis.capitalAllocation.buybacks}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Dividends:</span>
-                            <span className="font-medium">{analysis.capitalAllocation.dividends}</span>
-                          </div>
-                        </div>
+                  {expandedSections.earnings && (
+                    <div className="p-8 space-y-4">
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-orange-200">
-                        <p className="font-bold text-gray-800 mb-1">Assessment:</p>
-                        <p className="text-gray-700">{analysis.capitalAllocation.assessment}</p>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
+                        <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
 
-                    {/* Base Rate Context */}
-                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                      <h4 className="font-bold text-lg text-blue-900 mb-3">Base Rate (Outside View)</h4>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <p className="text-gray-700 mb-2">{analysis.capitalAllocation.baseRateComparison}</p>
-                          <p className="text-sm text-gray-500 italic">Comparing {analysis.ticker}'s ROIC of {analysis.roicAnalysis.roicCalculated.percentage} to the {analysis.industry} industry average.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Earnings Call Sentiment */}
-            {analysis.earningsCallSentiment && (
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
+              {/* Expectations Investing */}
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
                 <button
-                  onClick={() => toggleSection('earnings')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
+                  onClick={() => toggleSection('expectations')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <TrendingUp size={28} className="text-green-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
+                    <TrendingUp size={28} className="text-purple-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
                   </div>
-                  {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                 </button>
 
-                {expandedSections.earnings && (
+                {expandedSections.expectations && (
                   <div className="p-8 space-y-4">
                     <div>
-                      <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
+                      <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
+                      <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
+                      <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
+                      <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
+                      <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
+                      <div className="text-gray-800">
+                        {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
+                          <div className="space-y-1">
+                            <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
+                            <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
+                            <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
+                          </div>
+                        ) : (
+                          <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                        )}
+                      </div>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
-                      <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
+                      <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
+                      <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Probabilistic Thinking */}
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('probabilistic')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Target size={28} className="text-purple-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
+                  </div>
+                  {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.probabilistic && (
+                  <div className="p-8 space-y-4">
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
+                      <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
+                      <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
+                      <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Management Quality */}
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('management')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Users size={28} className="text-purple-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
+                  </div>
+                  {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.management && (
+                  <div className="p-8 space-y-4">
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
+                      <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
+                      <p className="text-gray-800">{analysis.management.strategicThinking}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
+                      <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Investment Conclusion */}
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('conclusion')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Brain size={28} className="text-purple-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
+                  </div>
+                  {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.conclusion && (
+                  <div className="p-8 space-y-6">
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                      <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
+                      <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
+                      <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
+                      <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
+                      <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export Button */}
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={exportAnalysis}
+                  className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-2xl"
+                >
+                  <Copy size={24} />
+                  Copy Complete Report
+                </button>
+              </div>
+            </div>
+        )}
+
+            {/* Hero Section - Features Highlight */}
+            {!analysis && (
+              <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
+                <div className="text-center mb-12">
+                  <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
+                  <p className="text-xl text-purple-100">Powered by AI + Mauboussin's proven frameworks</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                  {/* Feature 1 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <Calculator size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
+                    <p className="text-purple-100">
+                      Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
+                    </p>
+                  </div>
+
+                  {/* Feature 2 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <Shield size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
+                    <p className="text-purple-100">
+                      Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
+                    </p>
+                  </div>
+
+                  {/* Feature 3 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <TrendingUp size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
+                    <p className="text-purple-100">
+                      Track record analysis of earnings beats/misses and management credibility assessment
+                    </p>
+                  </div>
+
+                  {/* Feature 4 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <BarChart3 size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
+                    <p className="text-purple-100">
+                      Reverse engineer market expectations and run bull/base/bear scenario analysis
+                    </p>
+                  </div>
+
+                  {/* Feature 5 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <Brain size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
+                    <p className="text-purple-100">
+                      Apply base rates and skill vs. luck analysis for better investment decisions
+                    </p>
+                  </div>
+
+                  {/* Feature 6 */}
+                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                    <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                      <FileText size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
+                    <p className="text-purple-100">
+                      Generate comprehensive analysis reports you can save, share, or reference later
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-center mt-12">
+                  <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
+                    <Zap size={20} />
+                    <span className="font-semibold">Instant Analysis</span>
+                    <span className="text-purple-200">•</span>
+                    <span className="font-semibold">SEC Data</span>
+                    <span className="text-purple-200">•</span>
+                    <span className="font-semibold">AI-Powered</span>
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Expectations Investing */}
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-              <button
-                onClick={() => toggleSection('expectations')}
-                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <TrendingUp size={28} className="text-purple-600" />
-                  <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
-                </div>
-                {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-              </button>
-
-              {expandedSections.expectations && (
-                <div className="p-8 space-y-4">
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
-                    <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
-                    <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
-                    <div className="text-gray-800">
-                      {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
-                        <div className="space-y-1">
-                          <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
-                          <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
-                          <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
-                        </div>
-                      ) : (
-                        <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
-                    <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Probabilistic Thinking */}
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-              <button
-                onClick={() => toggleSection('probabilistic')}
-                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Target size={28} className="text-purple-600" />
-                  <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
-                </div>
-                {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-              </button>
-
-              {expandedSections.probabilistic && (
-                <div className="p-8 space-y-4">
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
-                    <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
-                    <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
-                    <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Management Quality */}
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-              <button
-                onClick={() => toggleSection('management')}
-                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Users size={28} className="text-purple-600" />
-                  <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
-                </div>
-                {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-              </button>
-
-              {expandedSections.management && (
-                <div className="p-8 space-y-4">
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
-                    <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
-                    <p className="text-gray-800">{analysis.management.strategicThinking}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
-                    <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Investment Conclusion */}
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-              <button
-                onClick={() => toggleSection('conclusion')}
-                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Brain size={28} className="text-purple-600" />
-                  <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
-                </div>
-                {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-              </button>
-
-              {expandedSections.conclusion && (
-                <div className="p-8 space-y-6">
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
-                    <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
-                    <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
-                    <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
-                    <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
-                    <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Export Button */}
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={exportAnalysis}
-                className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-2xl"
-              >
-                <Copy size={24} />
-                Copy Complete Report
-              </button>
-            </div>
+            {/* Footer */}
+            {/* Placeholder removed - cleaner UI */}
           </div>
-        )}
-
-        {/* Hero Section - Features Highlight */}
-        {!analysis && (
-          <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
-              <p className="text-xl text-purple-100">Powered by AI + Mauboussin's proven frameworks</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {/* Feature 1 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Calculator size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
-                <p className="text-purple-100">
-                  Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
-                </p>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Shield size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
-                <p className="text-purple-100">
-                  Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
-                </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <TrendingUp size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
-                <p className="text-purple-100">
-                  Track record analysis of earnings beats/misses and management credibility assessment
-                </p>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <BarChart3 size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
-                <p className="text-purple-100">
-                  Reverse engineer market expectations and run bull/base/bear scenario analysis
-                </p>
-              </div>
-
-              {/* Feature 5 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Brain size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
-                <p className="text-purple-100">
-                  Apply base rates and skill vs. luck analysis for better investment decisions
-                </p>
-              </div>
-
-              {/* Feature 6 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <FileText size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
-                <p className="text-purple-100">
-                  Generate comprehensive analysis reports you can save, share, or reference later
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center mt-12">
-              <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
-                <Zap size={20} />
-                <span className="font-semibold">Instant Analysis</span>
-                <span className="text-purple-200">•</span>
-                <span className="font-semibold">SEC Data</span>
-                <span className="text-purple-200">•</span>
-                <span className="font-semibold">AI-Powered</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        {/* Placeholder removed - cleaner UI */}
-      </div>
 
       {/* Export Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b-2 border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-800">Complete Analysis Report</h3>
-              <button
-                onClick={() => setShowExportModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b-2 border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-800">Complete Analysis Report</h3>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
 
-            <div className="p-6 overflow-y-auto flex-1">
-              <textarea
-                readOnly
-                value={generateReport()}
-                className="w-full h-full min-h-[500px] p-4 border-2 border-gray-300 rounded-lg font-mono text-sm"
-              />
-            </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <textarea
+                  readOnly
+                  value={generateReport()}
+                  className="w-full h-full min-h-[500px] p-4 border-2 border-gray-300 rounded-lg font-mono text-sm"
+                />
+              </div>
 
-            <div className="p-6 border-t-2 border-gray-200 flex gap-4">
-              <button
-                onClick={copyToClipboard}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all"
-              >
-                <Copy size={20} />
-                {copied ? '✓ Copied!' : 'Copy to Clipboard'}
-              </button>
-              <button
-                onClick={() => setShowExportModal(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition-all"
-              >
-                Close
-              </button>
+              <div className="p-6 border-t-2 border-gray-200 flex gap-4">
+                <button
+                  onClick={copyToClipboard}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all"
+                >
+                  <Copy size={20} />
+                  {copied ? '✓ Copied!' : 'Copy to Clipboard'}
+                </button>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Paywall Modal */}
-      {showPaywall && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8">
-            <div className="text-center">
-              <div className="mb-6">
-                <Lock size={64} className="mx-auto text-purple-600" />
-              </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Unlock Unlimited Analyses
-              </h2>
-              <p className="text-xl text-gray-600 mb-2">
-                You've used your <span className="font-bold text-purple-600">1 free analysis</span>
-              </p>
-              <p className="text-gray-600 mb-8">
-                Get unlimited access with a one-time payment
-              </p>
-
-              {/* Pricing */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 mb-8">
-                <div className="flex items-baseline justify-center gap-2 mb-4">
-                  <span className="text-5xl font-bold text-gray-900">$9.99</span>
-                  <span className="text-gray-600">one-time</span>
+        {/* Paywall Modal */}
+        {showPaywall && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8">
+              <div className="text-center">
+                <div className="mb-6">
+                  <Lock size={64} className="mx-auto text-purple-600" />
                 </div>
-                <p className="text-gray-700 font-medium mb-6">Lifetime Unlimited Access</p>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                  Unlock Unlimited Analyses
+                </h2>
+                <p className="text-xl text-gray-600 mb-2">
+                  You've used your <span className="font-bold text-purple-600">1 free analysis</span>
+                </p>
+                <p className="text-gray-600 mb-8">
+                  Get unlimited access with a one-time payment
+                </p>
 
-                <div className="space-y-3 text-left max-w-md mx-auto">
-                  <div className="flex items-center gap-3">
-                    <Check size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Unlimited company analyses</span>
+                {/* Pricing */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 mb-8">
+                  <div className="flex items-baseline justify-center gap-2 mb-4">
+                    <span className="text-5xl font-bold text-gray-900">$9.99</span>
+                    <span className="text-gray-600">one-time</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Check size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Complete ROIC calculations</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Check size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Moat analysis framework</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Check size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Export detailed reports</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Check size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Access forever</span>
-                  </div>
-                </div>
-              </div>
+                  <p className="text-gray-700 font-medium mb-6">Lifetime Unlimited Access</p>
 
-              {/* Buttons */}
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={handlePayment}
-                  disabled={isProcessingPayment}
-                  className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  {isProcessingPayment ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader className="animate-spin" size={20} />
-                      Processing...
+                  <div className="space-y-3 text-left max-w-md mx-auto">
+                    <div className="flex items-center gap-3">
+                      <Check size={20} className="text-green-600 flex-shrink-0" />
+                      <span className="text-gray-700">Unlimited company analyses</span>
                     </div>
-                  ) : (
-                    'Get Unlimited Access - $9.99'
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowPaywall(false)}
-                  className="text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  Maybe later
-                </button>
-              </div>
+                    <div className="flex items-center gap-3">
+                      <Check size={20} className="text-green-600 flex-shrink-0" />
+                      <span className="text-gray-700">Complete ROIC calculations</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Check size={20} className="text-green-600 flex-shrink-0" />
+                      <span className="text-gray-700">Moat analysis framework</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Check size={20} className="text-green-600 flex-shrink-0" />
+                      <span className="text-gray-700">Export detailed reports</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Check size={20} className="text-green-600 flex-shrink-0" />
+                      <span className="text-gray-700">Access forever</span>
+                    </div>
+                  </div>
+                </div>
 
-              <p className="text-sm text-gray-500 mt-6">
-                Secure payment powered by Stripe
-              </p>
+                {/* Buttons */}
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={handlePayment}
+                    disabled={isProcessingPayment}
+                    className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  >
+                    {isProcessingPayment ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader className="animate-spin" size={20} />
+                        Processing...
+                      </div>
+                    ) : (
+                      'Get Unlimited Access - $9.99'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowPaywall(false)}
+                    className="text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Maybe later
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-500 mt-6">
+                  Secure payment powered by Stripe
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+      );
 };
 
-export default MauboussinAIAnalyzer;
+      export default MauboussinAIAnalyzer;
