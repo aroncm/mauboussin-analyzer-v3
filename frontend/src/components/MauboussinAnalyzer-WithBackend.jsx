@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText } from 'lucide-react';
+import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText, PieChart } from 'lucide-react';
 import { parseFinancialNumber } from '../utils/formatters';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -19,6 +19,7 @@ const MauboussinAIAnalyzer = () => {
   const [expandedSections, setExpandedSections] = useState({
     roic: true,
     moat: true,
+    capitalAllocation: true,
     earnings: true,
     expectations: true,
     probabilistic: true,
@@ -349,6 +350,17 @@ const MauboussinAIAnalyzer = () => {
           operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
           capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
           freeCashFlow: parseNumber(cashFlow.operatingCashflow) - Math.abs(parseNumber(cashFlow.capitalExpenditures))
+        },
+
+        // Capital Allocation Metrics (New)
+        capitalAllocationData: {
+          operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
+          capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
+          // Try multiple common keys for dividends and buybacks
+          dividends: Math.abs(parseNumber(cashFlow.dividendPayout || cashFlow.paymentOfDividends || 0)),
+          repurchases: Math.abs(parseNumber(cashFlow.paymentsForRepurchaseOfCommonStock || cashFlow.paymentsForRepurchaseOfEquity || cashFlow.stockSaleAndPurchase || 0)),
+          acquisitions: Math.abs(parseNumber(cashFlow.paymentsForAcquisitionOfBusinesses || cashFlow.acquisitionOfBusiness || 0)),
+          debtRepayment: Math.abs(parseNumber(cashFlow.paymentsForRepurchaseOfLongTermDebt || cashFlow.repaymentOfLongTermDebt || 0))
         },
 
         // Historical data for trend analysis (up to 5 years)
@@ -908,7 +920,134 @@ Generated: ${new Date().toLocaleString()}
                   )}
                 </div>
               )}
+              {/* Capital Allocation & Base Rates */}
+              {analysis.capitalAllocation && (
+                <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('capitalAllocation')}
+                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <PieChart size={28} className="text-orange-600" />
+                      <h3 className="text-2xl font-bold text-gray-800">Capital Allocation & Base Rates</h3>
+                    </div>
+                    {expandedSections.capitalAllocation ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  </button>
+
+                  {expandedSections.capitalAllocation && (
+                    <div className="p-8 space-y-6">
+                      {/* Capital Allocation Breakdown */}
+                      <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
+                        <h4 className="font-bold text-lg text-orange-900 mb-4">Uses of Cash Analysis</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <p className="text-gray-600 mb-1">Total Operating Cash Flow:</p>
+                            <p className="text-xl font-bold text-gray-900">{analysis.capitalAllocation.operatingCashFlow}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">CapEx (Reinvestment):</span>
+                              <span className="font-medium">{analysis.capitalAllocation.capex}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Acquisitions (Inorganic):</span>
+                              <span className="font-medium">{analysis.capitalAllocation.acquisitions}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Stock Buybacks:</span>
+                              <span className="font-medium">{analysis.capitalAllocation.buybacks}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Dividends:</span>
+                              <span className="font-medium">{analysis.capitalAllocation.dividends}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-orange-200">
+                          <p className="font-bold text-gray-800 mb-1">Assessment:</p>
+                          <p className="text-gray-700">{analysis.capitalAllocation.assessment}</p>
+                        </div>
+                      </div>
+
+                      {/* Base Rate Context */}
+                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                        <h4 className="font-bold text-lg text-blue-900 mb-3">Base Rate (Outside View)</h4>
+                        <div className="flex items-start gap-4">
+                          <div className="flex-1">
+                            <p className="text-gray-700 mb-2">{analysis.capitalAllocation.baseRateComparison}</p>
+                            <p className="text-sm text-gray-500 italic">Comparing {analysis.ticker}'s ROIC of {analysis.roicAnalysis.roicCalculated.percentage} to the {analysis.industry} industry average.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Capital Allocation & Base Rates */}
+            {analysis.capitalAllocation && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('capitalAllocation')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <PieChart size={28} className="text-orange-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Capital Allocation & Base Rates</h3>
+                  </div>
+                  {expandedSections.capitalAllocation ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.capitalAllocation && (
+                  <div className="p-8 space-y-6">
+                    {/* Capital Allocation Breakdown */}
+                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
+                      <h4 className="font-bold text-lg text-orange-900 mb-4">Uses of Cash Analysis</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-gray-600 mb-1">Total Operating Cash Flow:</p>
+                          <p className="text-xl font-bold text-gray-900">{analysis.capitalAllocation.operatingCashFlow}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">CapEx (Reinvestment):</span>
+                            <span className="font-medium">{analysis.capitalAllocation.capex}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Acquisitions (Inorganic):</span>
+                            <span className="font-medium">{analysis.capitalAllocation.acquisitions}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Stock Buybacks:</span>
+                            <span className="font-medium">{analysis.capitalAllocation.buybacks}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Dividends:</span>
+                            <span className="font-medium">{analysis.capitalAllocation.dividends}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-orange-200">
+                        <p className="font-bold text-gray-800 mb-1">Assessment:</p>
+                        <p className="text-gray-700">{analysis.capitalAllocation.assessment}</p>
+                      </div>
+                    </div>
+
+                    {/* Base Rate Context */}
+                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                      <h4 className="font-bold text-lg text-blue-900 mb-3">Base Rate (Outside View)</h4>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <p className="text-gray-700 mb-2">{analysis.capitalAllocation.baseRateComparison}</p>
+                          <p className="text-sm text-gray-500 italic">Comparing {analysis.ticker}'s ROIC of {analysis.roicAnalysis.roicCalculated.percentage} to the {analysis.industry} industry average.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Earnings Call Sentiment */}
             {analysis.earningsCallSentiment && (

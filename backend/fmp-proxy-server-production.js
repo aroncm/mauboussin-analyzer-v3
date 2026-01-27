@@ -388,6 +388,20 @@ Shares Outstanding: ${formatCurrency(companyData.marketData.sharesOutstanding, 1
 ${waccSection}`;
     }
 
+    // Add Capital Allocation section if available
+    let capitalAllocationSection = '';
+    if (companyData.capitalAllocationData) {
+      const ca = companyData.capitalAllocationData;
+      capitalAllocationSection = `
+CAPITAL ALLOCATION DATA (Trailing 12M):
+Operating Cash Flow (Source): ${formatCurrency(ca.operatingCashFlow)}
+Reinvestment (Use): ${formatCurrency(ca.capitalExpenditures)} (CapEx)
+Acquisitions (Use): ${formatCurrency(ca.acquisitions)}
+Return to Shareholders (Use): ${formatCurrency(ca.dividends)} (Dividends) + ${formatCurrency(ca.repurchases)} (Buybacks)
+Debt Repayment (Use): ${formatCurrency(ca.debtRepayment)}
+`;
+    }
+
     // Add earnings trend section if available
     let earningsSection = '';
     if (companyData.earningsData && companyData.earningsData.quarterlyEarnings) {
@@ -424,6 +438,7 @@ Industry: ${companyData.industry}
 Fiscal Year: ${companyData.fiscalPeriod}
 Currency: ${companyData.currency}
 ${marketDataSection}
+${capitalAllocationSection}
 ${earningsSection}
 
 INCOME STATEMENT:
@@ -573,9 +588,19 @@ Show 1 decimal place. Examples: "$45.2B", "$1.3T", "$789.5M"
       "verdict": "Creating/destroying value? If possible show economic profit with currency format (e.g., Annual value creation: $22.3B)",
       "context": "How does moat enable this ROIC?"
     },
-    "historicalTrend": "Calculate ROIC for all available years. Is it improving, stable, or declining? What does this say about moat strength?",
     "incrementalROIC": "If multi-year data available: Are new investments generating good returns? (Change in NOPAT / Change in IC)",
     "dataQuality": "Confidence in the calculations (high/medium/low)"
+  },
+
+  "capitalAllocation": {
+    "operatingCashFlow": "Currency formatted",
+    "capex": "Currency formatted",
+    "acquisitions": "Currency formatted",
+    "buybacks": "Currency formatted",
+    "dividends": "Currency formatted",
+    "debtRepayment": "Currency formatted",
+    "assessment": "Evaluate management's skill. Are they reinvesting for growth (high CapEx), returning cash (Buybacks/Divs), or empire building (Acquisitions)? Is this appropriate for their lifecycle stage?",
+    "baseRateComparison": "MANDATORY: Compare the company's ROIC and Capital Allocation to the industry base rate. (e.g., 'Google's 25% ROIC is in the top decile for Tech' or 'Ford's 4% ROIC is typical for Autos'). Use your internal knowledge of industry averages."
   },
   
   "moatAnalysis": {
