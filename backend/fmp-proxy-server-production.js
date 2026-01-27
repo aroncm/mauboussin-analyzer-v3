@@ -70,7 +70,7 @@ console.log('Allowed CORS origins:', allowedOrigins);
 console.log('NODE_ENV:', process.env.NODE_ENV);
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -146,7 +146,7 @@ const cacheMiddleware = (req, res, next) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     alphaVantageConfigured: !!process.env.ALPHA_VANTAGE_API_KEY,
     anthropicConfigured: !!process.env.ANTHROPIC_API_KEY
@@ -167,8 +167,8 @@ app.get('/api/av/search', cacheMiddleware, async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.Note) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    if (data.Note || data.Information) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute or check your daily limit.' });
     }
 
     res.json(data.bestMatches || []);
@@ -192,8 +192,8 @@ app.get('/api/av/overview/:symbol', cacheMiddleware, async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.Note) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    if (data.Note || data.Information) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute or check your daily limit.' });
     }
 
     if (!data.Symbol) {
@@ -221,8 +221,8 @@ app.get('/api/av/income-statement/:symbol', cacheMiddleware, async (req, res) =>
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.Note) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    if (data.Note || data.Information) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute or check your daily limit.' });
     }
 
     res.json(data.annualReports || []);
@@ -246,8 +246,8 @@ app.get('/api/av/balance-sheet/:symbol', cacheMiddleware, async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.Note) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    if (data.Note || data.Information) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute or check your daily limit.' });
     }
 
     res.json(data.annualReports || []);
@@ -271,8 +271,8 @@ app.get('/api/av/cash-flow/:symbol', cacheMiddleware, async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.Note) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute.' });
+    if (data.Note || data.Information) {
+      return res.status(429).json({ error: 'API rate limit reached. Please wait a minute or check your daily limit.' });
     }
 
     res.json(data.annualReports || []);
@@ -398,10 +398,10 @@ ${waccSection}`;
       earningsSection = `
 RECENT EARNINGS TREND & SENTIMENT (Last 4 Quarters):
 ${quarters.map((q, i) => {
-  const surprise = parseFloat(q.surprise || 0);
-  const sentiment = surprise > 2 ? '📈 Strong Beat' : surprise > 0 ? '✅ Beat' : surprise < -2 ? '📉 Big Miss' : '❌ Miss';
-  return `Q${4-i} ${q.fiscalDateEnding}: EPS $${q.reportedEPS || 'N/A'} (Est: $${q.estimatedEPS || 'N/A'}) - Surprise: ${q.surprise || 'N/A'}% ${sentiment}`;
-}).join('\n')}
+        const surprise = parseFloat(q.surprise || 0);
+        const sentiment = surprise > 2 ? '📈 Strong Beat' : surprise > 0 ? '✅ Beat' : surprise < -2 ? '📉 Big Miss' : '❌ Miss';
+        return `Q${4 - i} ${q.fiscalDateEnding}: EPS $${q.reportedEPS || 'N/A'} (Est: $${q.estimatedEPS || 'N/A'}) - Surprise: ${q.surprise || 'N/A'}% ${sentiment}`;
+      }).join('\n')}
 
 Earnings Pattern: ${beatCount} beats, ${missCount} misses out of ${quarters.length} quarters
 Track Record: ${beatCount >= 3 ? 'Consistently beating expectations 🟢' : beatCount >= 2 ? 'Mixed performance 🟡' : 'Struggling to meet expectations 🔴'}
@@ -660,7 +660,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, just pure JSON.`;
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Anthropic API error:', errorData);
-      return res.status(response.status).json({ 
+      return res.status(response.status).json({
         error: 'Failed to analyze company',
         details: errorData
       });
