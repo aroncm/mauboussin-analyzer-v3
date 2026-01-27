@@ -177,7 +177,7 @@ const MauboussinAIAnalyzer = () => {
       if (ticker.includes(' - ')) {
         ticker = ticker.split(' - ')[0].trim();
       }
-      
+
       if (companyInput.includes(' ') || companyInput !== companyInput.toUpperCase()) {
         try {
           const searchResponse = await fetchWithRetry(
@@ -321,11 +321,11 @@ const MauboussinAIAnalyzer = () => {
           interestExpense: parseNumber(income.interestExpense),
           taxExpense: parseNumber(income.incomeTaxExpense),
           netIncome: parseNumber(income.netIncome),
-          taxRate: parseNumber(income.incomeBeforeTax) !== 0 
-            ? parseNumber(income.incomeTaxExpense) / parseNumber(income.incomeBeforeTax) 
+          taxRate: parseNumber(income.incomeBeforeTax) !== 0
+            ? parseNumber(income.incomeTaxExpense) / parseNumber(income.incomeBeforeTax)
             : 0.21
         },
-        
+
         balanceSheet: {
           totalAssets: parseNumber(balance.totalAssets),
           currentAssets: parseNumber(balance.totalCurrentAssets),
@@ -335,16 +335,16 @@ const MauboussinAIAnalyzer = () => {
           ppe: parseNumber(balance.propertyPlantEquipment),
           goodwill: parseNumber(balance.goodwill),
           intangibleAssets: parseNumber(balance.intangibleAssets),
-          
+
           totalLiabilities: parseNumber(balance.totalLiabilities),
           currentLiabilities: parseNumber(balance.totalCurrentLiabilities),
           accountsPayable: parseNumber(balance.currentAccountsPayable),
           shortTermDebt: parseNumber(balance.shortTermDebt),
           longTermDebt: parseNumber(balance.shortLongTermDebtTotal) - parseNumber(balance.shortTermDebt),
-          
+
           totalEquity: parseNumber(balance.totalShareholderEquity)
         },
-        
+
         cashFlow: {
           operatingCashFlow: parseNumber(cashFlow.operatingCashflow),
           capitalExpenditures: Math.abs(parseNumber(cashFlow.capitalExpenditures)),
@@ -403,10 +403,10 @@ const MauboussinAIAnalyzer = () => {
 
       const analysisData = await analysisResponse.json();
       let analysisText = analysisData.analysis;
-      
+
       // Strip markdown if present
       analysisText = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      
+
       let parsedAnalysis;
       try {
         parsedAnalysis = JSON.parse(analysisText);
@@ -588,10 +588,10 @@ Valuation: ${analysis.expectationsAnalysis.currentValuation}
 
 Scenarios:
 ${typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null
-  ? `  Bull: ${analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}
+        ? `  Bull: ${analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}
   Base: ${analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}
   Bear: ${analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}`
-  : analysis.expectationsAnalysis.scenarioAnalysis}
+        : analysis.expectationsAnalysis.scenarioAnalysis}
 
 Probability Weighted: ${analysis.expectationsAnalysis.probabilityWeighted}
 
@@ -804,7 +804,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.roic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.roic && (
                 <div className="p-8 space-y-6">
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
@@ -853,7 +853,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.moat ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.moat && (
                 <div className="p-8 space-y-4">
                   <div>
@@ -975,7 +975,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.expectations && (
                 <div className="p-8 space-y-4">
                   <div>
@@ -1020,7 +1020,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.probabilistic && (
                 <div className="p-8 space-y-4">
                   <div>
@@ -1051,7 +1051,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.management && (
                 <div className="p-8 space-y-4">
                   <div>
@@ -1082,7 +1082,7 @@ Generated: ${new Date().toLocaleString()}
                 </div>
                 {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </button>
-              
+
               {expandedSections.conclusion && (
                 <div className="p-8 space-y-6">
                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
@@ -1119,7 +1119,7 @@ Generated: ${new Date().toLocaleString()}
         )}
 
         {/* Hero Section - Features Highlight */}
-        {analysis && (
+        {!analysis && (
           <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
@@ -1224,7 +1224,7 @@ Generated: ${new Date().toLocaleString()}
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto flex-1">
               <textarea
                 readOnly
@@ -1232,7 +1232,7 @@ Generated: ${new Date().toLocaleString()}
                 className="w-full h-full min-h-[500px] p-4 border-2 border-gray-300 rounded-lg font-mono text-sm"
               />
             </div>
-            
+
             <div className="p-6 border-t-2 border-gray-200 flex gap-4">
               <button
                 onClick={copyToClipboard}
