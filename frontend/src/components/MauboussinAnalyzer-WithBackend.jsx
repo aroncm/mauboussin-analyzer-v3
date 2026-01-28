@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText, PieChart, FileDown } from 'lucide-react';
 import { parseFinancialNumber } from '../utils/formatters';
 import { loadStripe } from '@stripe/stripe-js';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const MauboussinAIAnalyzer = () => {
   const [companyInput, setCompanyInput] = useState('');
@@ -705,6 +707,106 @@ Generated: ${new Date().toLocaleString()}
     }
   };
 
+  const downloadPDF = () => {
+    if (!analysis) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(128, 0, 128); // Purple color
+    doc.text('Mauboussin AI Analysis', pageWidth / 2, 20, { align: 'center' });
+
+    // Company Info
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${analysis.companyName} (${analysis.ticker})`, 14, 35);
+    doc.setFontSize(10);
+    doc.text(`${analysis.industry} | FY: ${analysis.fiscalYear}`, 14, 40);
+
+    // Business Model
+    doc.setFontSize(10);
+    const businessModelLines = doc.splitTextToSize(analysis.businessModel, pageWidth - 28);
+    doc.text(businessModelLines, 14, 50);
+
+    let finalY = 50 + (businessModelLines.length * 5) + 5;
+
+    // ROIC Section
+    doc.setFontSize(12);
+    doc.setTextColor(128, 0, 128);
+    doc.text('ROIC Analysis', 14, finalY);
+
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [['Metric', 'Value/Details']],
+      body: [
+        ['ROIC %', analysis.roicAnalysis.roicCalculated.percentage],
+        ['NOPAT', analysis.roicAnalysis.nopat.nopatCalculated],
+        ['Invested Capital', analysis.roicAnalysis.investedCapital.totalIC],
+        ['WACC', analysis.roicAnalysis.valueCreation.estimatedWACC],
+        ['Verdict', analysis.roicAnalysis.valueCreation.verdict]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [128, 0, 128] }
+    });
+
+    // Moat Section
+    doc.text('Competitive Moat', 14, doc.lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Metric', 'Details']],
+      body: [
+        ['Type', analysis.moatAnalysis.moatType],
+        ['Strength', analysis.moatAnalysis.moatStrength],
+        ['Durability', analysis.moatAnalysis.moatDurability],
+        ['Evidence', analysis.moatAnalysis.evidenceForMoat],
+        ['Threats', analysis.moatAnalysis.threatsToMoat || 'N/A']
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [128, 0, 128] }
+    });
+
+    // Capital Allocation
+    doc.text('Capital Allocation', 14, doc.lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Operating Cash Flow', analysis.capitalAllocation.operatingCashFlow],
+        ['CapEx', analysis.capitalAllocation.capex],
+        ['Dividends', analysis.capitalAllocation.dividends],
+        ['Buybacks', analysis.capitalAllocation.buybacks],
+        ['Assessment', analysis.capitalAllocation.assessment]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [255, 165, 0] } // Orange for capital allocation
+    });
+
+    // Conclusion
+    doc.text('Investment Conclusion', 14, doc.lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Component', 'Analysis']],
+      body: [
+        ['Thesis', analysis.conclusion.investmentThesis],
+        ['Risks', analysis.conclusion.keyRisks],
+        ['Recommendation', analysis.conclusion.recommendation]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [128, 0, 128] },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 'auto' }
+      }
+    });
+
+    doc.save(`${analysis.ticker}_Mauboussin_Analysis.pdf`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8">
       <div className="max-w-6xl mx-auto">
@@ -1237,7 +1339,7 @@ Generated: ${new Date().toLocaleString()}
                   className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-2xl"
                 >
                   <Copy size={24} />
-                  Copy Complete Report
+                  Download Report
                 </button>
               </div>
             </div>
@@ -1366,6 +1468,13 @@ Generated: ${new Date().toLocaleString()}
               >
                 <Copy size={20} />
                 {copied ? '✓ Copied!' : 'Copy to Clipboard'}
+              </button>
+              <button
+                onClick={downloadPDF}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-bold hover:from-red-700 hover:to-rose-700 transition-all"
+              >
+                <FileText size={20} />
+                Download PDF
               </button>
               <button
                 onClick={downloadCSV}
