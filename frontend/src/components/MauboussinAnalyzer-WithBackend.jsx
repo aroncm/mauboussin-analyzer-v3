@@ -1089,7 +1089,7 @@ Generated: ${new Date().toLocaleString()}
 
         {/* Analysis Results */}
         {analysis && (
-          <div className="space-y-8">
+          <div className="space-y-4">
             {/* Company Overview */}
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-purple-200">
               <div className="flex items-center gap-3 mb-6">
@@ -1219,353 +1219,353 @@ Generated: ${new Date().toLocaleString()}
                   )}
                 </div>
               )}
+            </div>
 
 
-              {/* Capital Allocation & Base Rates */}
-              {analysis.capitalAllocation && (
-                <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
-                  <button
-                    onClick={() => toggleSection('capitalAllocation')}
-                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <PieChart size={28} className="text-orange-600" />
-                      <h3 className="text-2xl font-bold text-gray-800">Capital Allocation & Base Rates</h3>
-                    </div>
-                    {expandedSections.capitalAllocation ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                  </button>
-
-                  {expandedSections.capitalAllocation && (
-                    <div className="p-8 space-y-6">
-                      {/* Capital Allocation Breakdown */}
-                      <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
-                        <h4 className="font-bold text-lg text-orange-900 mb-4">Uses of Cash Analysis</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <p className="text-gray-600 mb-1">Total Operating Cash Flow:</p>
-                            <p className="text-xl font-bold text-gray-900">{analysis.capitalAllocation.operatingCashFlow}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">CapEx (Reinvestment):</span>
-                              <span className="font-medium">{analysis.capitalAllocation.capex}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Acquisitions (Inorganic):</span>
-                              <span className="font-medium">{analysis.capitalAllocation.acquisitions}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Stock Buybacks:</span>
-                              <span className="font-medium">{analysis.capitalAllocation.buybacks}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Dividends:</span>
-                              <span className="font-medium">{analysis.capitalAllocation.dividends}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-orange-200">
-                          <p className="font-bold text-gray-800 mb-1">Assessment:</p>
-                          <p className="text-gray-700">{analysis.capitalAllocation.assessment}</p>
-                        </div>
-                      </div>
-
-                      {/* Base Rate Context */}
-                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                        <h4 className="font-bold text-lg text-blue-900 mb-3">Base Rate (Outside View)</h4>
-                        <div className="flex items-start gap-4">
-                          <div className="flex-1">
-                            <p className="text-gray-700 mb-2">{analysis.capitalAllocation.baseRateComparison}</p>
-                            <p className="text-sm text-gray-500 italic">Comparing {analysis.ticker}'s ROIC of {analysis.roicAnalysis.roicCalculated.percentage} to the {analysis.industry} industry average.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Earnings Call Sentiment */}
-              {analysis.earningsCallSentiment && (
-                <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
-                  <button
-                    onClick={() => toggleSection('earnings')}
-                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <TrendingUp size={28} className="text-green-600" />
-                      <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
-                    </div>
-                    {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                  </button>
-
-                  {expandedSections.earnings && (
-                    <div className="p-8 space-y-4">
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
-                        <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Market Efficiency & Narratives (BAIT) */}
-              {analysis.marketEfficiency && (
-                <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
-                  <button
-                    onClick={() => toggleSection('marketEfficiency')}
-                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Users size={28} className="text-gray-600" />
-                      <h3 className="text-2xl font-bold text-gray-800">Who Is On The Other Side?</h3>
-                    </div>
-                    {expandedSections.marketEfficiency ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                  </button>
-
-                  {expandedSections.marketEfficiency && (
-                    <div className="p-8 space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* BAIT Framework */}
-                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 md:col-span-2">
-                          <h4 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                            <Brain size={20} />
-                            BAIT Framework (Sources of Inefficiency)
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 bg-white rounded-lg shadow-sm">
-                              <p className="text-sm font-bold text-purple-600 mb-1">Behavioral</p>
-                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.behavioral || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-white rounded-lg shadow-sm">
-                              <p className="text-sm font-bold text-blue-600 mb-1">Analytical</p>
-                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.analytical || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-white rounded-lg shadow-sm">
-                              <p className="text-sm font-bold text-green-600 mb-1">Informational</p>
-                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.informational || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-white rounded-lg shadow-sm">
-                              <p className="text-sm font-bold text-orange-600 mb-1">Technical</p>
-                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.technical || 'N/A'}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Counterparty & Time Arb */}
-                        <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                          <h4 className="font-bold text-lg text-blue-900 mb-3">Counterparty Analysis</h4>
-                          <p className="text-gray-700 font-medium mb-1">Who is selling to you?</p>
-                          <p className="text-gray-800">{analysis.marketEfficiency.counterparty || 'N/A'}</p>
-                        </div>
-
-                        <div className="bg-green-50 p-6 rounded-xl border border-green-200">
-                          <h4 className="font-bold text-lg text-green-900 mb-3">Time Arbitrage</h4>
-                          <p className="text-gray-700 font-medium mb-1">Time Horizon Edge:</p>
-                          <p className="text-gray-800">{analysis.marketEfficiency.timeArbitrage || 'N/A'}</p>
-                        </div>
-
-                        {/* Narrative */}
-                        <div className="bg-purple-50 p-6 rounded-xl border border-purple-200 md:col-span-2">
-                          <h4 className="font-bold text-lg text-purple-900 mb-3">Narrative Economics</h4>
-                          <div className="space-y-4">
-                            <div>
-                              <p className="text-sm font-bold text-purple-700 uppercase mb-1">Current Dominant Story</p>
-                              <p className="text-gray-800">{analysis.marketEfficiency.narrative?.currentStory || 'N/A'}</p>
-                            </div>
-                            <div className="border-t border-purple-200 pt-3">
-                              <p className="text-sm font-bold text-purple-700 uppercase mb-1">Gap vs. Reality</p>
-                              <p className="text-gray-800">{analysis.marketEfficiency.narrative?.realityGap || 'N/A'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Expectations Investing */}
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+            {/* Capital Allocation & Base Rates */}
+            {analysis.capitalAllocation && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
                 <button
-                  onClick={() => toggleSection('expectations')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+                  onClick={() => toggleSection('capitalAllocation')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <TrendingUp size={28} className="text-purple-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
+                    <PieChart size={28} className="text-orange-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Capital Allocation & Base Rates</h3>
                   </div>
-                  {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  {expandedSections.capitalAllocation ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                 </button>
 
-                {expandedSections.expectations && (
-                  <div className="p-8 space-y-4">
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
-                      <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
-                      <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
-                      <div className="text-gray-800">
-                        {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
-                          <div className="space-y-1">
-                            <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
-                            <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
-                            <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
-                          </div>
-                        ) : (
-                          <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
-                      <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Probabilistic Thinking */}
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('probabilistic')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Target size={28} className="text-purple-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
-                  </div>
-                  {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                </button>
-
-                {expandedSections.probabilistic && (
-                  <div className="p-8 space-y-4">
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
-                      <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
-                      <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
-                      <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Management Quality */}
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('management')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Users size={28} className="text-purple-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
-                  </div>
-                  {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                </button>
-
-                {expandedSections.management && (
-                  <div className="p-8 space-y-4">
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
-                      <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
-                      <p className="text-gray-800">{analysis.management.strategicThinking}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
-                      <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Investment Conclusion */}
-              <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('conclusion')}
-                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Brain size={28} className="text-purple-600" />
-                    <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
-                  </div>
-                  {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                </button>
-
-                {expandedSections.conclusion && (
+                {expandedSections.capitalAllocation && (
                   <div className="p-8 space-y-6">
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
-                      <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
-                      <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
+                    {/* Capital Allocation Breakdown */}
+                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
+                      <h4 className="font-bold text-lg text-orange-900 mb-4">Uses of Cash Analysis</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-gray-600 mb-1">Total Operating Cash Flow:</p>
+                          <p className="text-xl font-bold text-gray-900">{analysis.capitalAllocation.operatingCashFlow}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">CapEx (Reinvestment):</span>
+                            <span className="font-medium">{analysis.capitalAllocation.capex}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Acquisitions (Inorganic):</span>
+                            <span className="font-medium">{analysis.capitalAllocation.acquisitions}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Stock Buybacks:</span>
+                            <span className="font-medium">{analysis.capitalAllocation.buybacks}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Dividends:</span>
+                            <span className="font-medium">{analysis.capitalAllocation.dividends}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-orange-200">
+                        <p className="font-bold text-gray-800 mb-1">Assessment:</p>
+                        <p className="text-gray-700">{analysis.capitalAllocation.assessment}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
-                      <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
-                      <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
-                      <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
+
+                    {/* Base Rate Context */}
+                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                      <h4 className="font-bold text-lg text-blue-900 mb-3">Base Rate (Outside View)</h4>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <p className="text-gray-700 mb-2">{analysis.capitalAllocation.baseRateComparison}</p>
+                          <p className="text-sm text-gray-500 italic">Comparing {analysis.ticker}'s ROIC of {analysis.roicAnalysis.roicCalculated.percentage} to the {analysis.industry} industry average.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Export Button */}
-              <div className="flex justify-center pt-4">
+            {/* Earnings Call Sentiment */}
+            {analysis.earningsCallSentiment && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-green-200 overflow-hidden">
                 <button
-                  onClick={exportAnalysis}
-                  className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-2xl"
+                  onClick={() => toggleSection('earnings')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors"
                 >
-                  <Copy size={24} />
-                  Download Report
+                  <div className="flex items-center gap-3">
+                    <TrendingUp size={28} className="text-green-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Earnings Call Sentiment</h3>
+                  </div>
+                  {expandedSections.earnings ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                 </button>
+
+                {expandedSections.earnings && (
+                  <div className="p-8 space-y-4">
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Overall Sentiment:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.overallSentiment}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Beat/Miss Pattern:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.beatMissPattern}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Management Credibility:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.managementCredibility}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Earnings Quality:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.earningsQuality}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Forward Guidance:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.forwardGuidance}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Red Flags:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.redFlags}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Positive Signals:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.positiveSignals}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
+                      <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* Market Efficiency & Narratives (BAIT) */}
+            {analysis.marketEfficiency && (
+              <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('marketEfficiency')}
+                  className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Users size={28} className="text-gray-600" />
+                    <h3 className="text-2xl font-bold text-gray-800">Who Is On The Other Side?</h3>
+                  </div>
+                  {expandedSections.marketEfficiency ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                </button>
+
+                {expandedSections.marketEfficiency && (
+                  <div className="p-8 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* BAIT Framework */}
+                      <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 md:col-span-2">
+                        <h4 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                          <Brain size={20} />
+                          BAIT Framework (Sources of Inefficiency)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-4 bg-white rounded-lg shadow-sm">
+                            <p className="text-sm font-bold text-purple-600 mb-1">Behavioral</p>
+                            <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.behavioral || 'N/A'}</p>
+                          </div>
+                          <div className="p-4 bg-white rounded-lg shadow-sm">
+                            <p className="text-sm font-bold text-blue-600 mb-1">Analytical</p>
+                            <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.analytical || 'N/A'}</p>
+                          </div>
+                          <div className="p-4 bg-white rounded-lg shadow-sm">
+                            <p className="text-sm font-bold text-green-600 mb-1">Informational</p>
+                            <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.informational || 'N/A'}</p>
+                          </div>
+                          <div className="p-4 bg-white rounded-lg shadow-sm">
+                            <p className="text-sm font-bold text-orange-600 mb-1">Technical</p>
+                            <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.technical || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Counterparty & Time Arb */}
+                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                        <h4 className="font-bold text-lg text-blue-900 mb-3">Counterparty Analysis</h4>
+                        <p className="text-gray-700 font-medium mb-1">Who is selling to you?</p>
+                        <p className="text-gray-800">{analysis.marketEfficiency.counterparty || 'N/A'}</p>
+                      </div>
+
+                      <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                        <h4 className="font-bold text-lg text-green-900 mb-3">Time Arbitrage</h4>
+                        <p className="text-gray-700 font-medium mb-1">Time Horizon Edge:</p>
+                        <p className="text-gray-800">{analysis.marketEfficiency.timeArbitrage || 'N/A'}</p>
+                      </div>
+
+                      {/* Narrative */}
+                      <div className="bg-purple-50 p-6 rounded-xl border border-purple-200 md:col-span-2">
+                        <h4 className="font-bold text-lg text-purple-900 mb-3">Narrative Economics</h4>
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-sm font-bold text-purple-700 uppercase mb-1">Current Dominant Story</p>
+                            <p className="text-gray-800">{analysis.marketEfficiency.narrative?.currentStory || 'N/A'}</p>
+                          </div>
+                          <div className="border-t border-purple-200 pt-3">
+                            <p className="text-sm font-bold text-purple-700 uppercase mb-1">Gap vs. Reality</p>
+                            <p className="text-gray-800">{analysis.marketEfficiency.narrative?.realityGap || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Expectations Investing */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('expectations')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Expectations Investing</h3>
+                </div>
+                {expandedSections.expectations ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+
+              {expandedSections.expectations && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Implied Expectations:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.impliedExpectations}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Current Valuation:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.currentValuation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Scenario Analysis:</p>
+                    <div className="text-gray-800">
+                      {typeof analysis.expectationsAnalysis.scenarioAnalysis === 'object' && analysis.expectationsAnalysis.scenarioAnalysis !== null ? (
+                        <div className="space-y-1">
+                          <p>Bull: {analysis.expectationsAnalysis.scenarioAnalysis.bull || 'N/A'}</p>
+                          <p>Base: {analysis.expectationsAnalysis.scenarioAnalysis.base || 'N/A'}</p>
+                          <p>Bear: {analysis.expectationsAnalysis.scenarioAnalysis.bear || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <p>{analysis.expectationsAnalysis.scenarioAnalysis}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Probability Weighted:</p>
+                    <p className="text-gray-800">{analysis.expectationsAnalysis.probabilityWeighted}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Probabilistic Thinking */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('probabilistic')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Target size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Probabilistic Thinking</h3>
+                </div>
+                {expandedSections.probabilistic ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+
+              {expandedSections.probabilistic && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Base Rates:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.baseRates}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Skill vs Luck:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.skillVsLuck}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Key Uncertainties:</p>
+                    <p className="text-gray-800">{analysis.probabilistic.keyUncertainties}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Management Quality */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('management')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Users size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Management Quality</h3>
+                </div>
+                {expandedSections.management ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+
+              {expandedSections.management && (
+                <div className="p-8 space-y-4">
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Capital Allocation:</p>
+                    <p className="text-gray-800">{analysis.management.capitalAllocation}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Strategic Thinking:</p>
+                    <p className="text-gray-800">{analysis.management.strategicThinking}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-1">Overall Assessment:</p>
+                    <p className="text-gray-800 font-bold">{analysis.management.overallAssessment}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Investment Conclusion */}
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 overflow-hidden">
+              <button
+                onClick={() => toggleSection('conclusion')}
+                className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Brain size={28} className="text-purple-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Investment Conclusion</h3>
+                </div>
+                {expandedSections.conclusion ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+
+              {expandedSections.conclusion && (
+                <div className="p-8 space-y-6">
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                    <p className="text-gray-600 font-medium mb-2">Investment Thesis:</p>
+                    <p className="text-gray-800 text-lg leading-relaxed">{analysis.conclusion.investmentThesis}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Key Risks:</p>
+                    <p className="text-gray-800">{analysis.conclusion.keyRisks}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">What Would Change Our View:</p>
+                    <p className="text-gray-800">{analysis.conclusion.whatWouldChange}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 font-medium mb-2">Recommendation:</p>
+                    <p className="text-gray-800 font-bold text-lg">{analysis.conclusion.recommendation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Export Button */}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={exportAnalysis}
+                className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-2xl"
+              >
+                <Copy size={24} />
+                Download Report
+              </button>
             </div>
           </div>
         )}
