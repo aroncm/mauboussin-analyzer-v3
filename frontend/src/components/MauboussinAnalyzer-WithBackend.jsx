@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText, PieChart } from 'lucide-react';
+import { Building2, TrendingUp, Shield, Users, Brain, Target, Search, Loader, AlertCircle, ChevronDown, ChevronUp, Copy, X, Calculator, Server, Lock, Check, Zap, BarChart3, FileText, PieChart, FileDown } from 'lucide-react';
 import { parseFinancialNumber } from '../utils/formatters';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -156,8 +156,8 @@ const MauboussinAIAnalyzer = () => {
       return;
     }
 
-    // Check paywall: allow 1 free analysis, then require payment
-    if (!isPaid && analysisCount >= 1) {
+    // Check paywall: allow 3 free analyses, then require payment
+    if (!isPaid && analysisCount >= 3) {
       setShowPaywall(true);
       return;
     }
@@ -654,6 +654,55 @@ Generated: ${new Date().toLocaleString()}
     navigator.clipboard.writeText(generateReport());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const downloadCSV = () => {
+    if (!analysis) return;
+
+    const sections = [
+      ['Company', analysis.companyName],
+      ['Ticker', analysis.ticker],
+      ['Industry', analysis.industry],
+      ['Fiscal Year', analysis.fiscalYear],
+      ['Business Model', analysis.businessModel],
+      [''],
+      ['ROIC Analysis', ''],
+      ['ROIC %', analysis.roicAnalysis.roicCalculated.percentage],
+      ['NOPAT', analysis.roicAnalysis.nopat.nopatCalculated],
+      ['Invested Capital', analysis.roicAnalysis.investedCapital.totalIC],
+      ['WACC', analysis.roicAnalysis.valueCreation.estimatedWACC],
+      ['Verdict', analysis.roicAnalysis.valueCreation.verdict],
+      [''],
+      ['Moat Analysis', ''],
+      ['Moat Type', analysis.moatAnalysis.moatType],
+      ['Strength', analysis.moatAnalysis.moatStrength],
+      ['Durability', analysis.moatAnalysis.moatDurability],
+      ['Evidence', analysis.moatAnalysis.evidenceForMoat],
+      [''],
+      ['Capital Allocation', ''],
+      ['Operating Cash Flow', analysis.capitalAllocation.operatingCashFlow],
+      ['CapEx', analysis.capitalAllocation.capex],
+      ['Dividends', analysis.capitalAllocation.dividends],
+      ['Buybacks', analysis.capitalAllocation.buybacks],
+      ['Assessment', analysis.capitalAllocation.assessment],
+      [''],
+      ['Conclusion', ''],
+      ['Thesis', analysis.conclusion.investmentThesis],
+      ['Recommendation', analysis.conclusion.recommendation]
+    ];
+
+    const csvContent = sections.map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${analysis.ticker}_Mauboussin_Analysis.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -1319,6 +1368,13 @@ Generated: ${new Date().toLocaleString()}
                 {copied ? '✓ Copied!' : 'Copy to Clipboard'}
               </button>
               <button
+                onClick={downloadCSV}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition-all"
+              >
+                <FileDown size={20} />
+                Download CSV
+              </button>
+              <button
                 onClick={() => setShowExportModal(false)}
                 className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition-all"
               >
@@ -1341,7 +1397,7 @@ Generated: ${new Date().toLocaleString()}
                 Unlock Unlimited Analyses
               </h2>
               <p className="text-xl text-gray-600 mb-2">
-                You've used your <span className="font-bold text-purple-600">1 free analysis</span>
+                You've used your <span className="font-bold text-purple-600">3 free analyses</span>
               </p>
               <p className="text-gray-600 mb-8">
                 Get unlimited access with a one-time payment
