@@ -589,6 +589,16 @@ KEY FRAMEWORKS TO APPLY:
    - Improving or deteriorating trajectory
    - Management credibility
 
+5. **MARKET EFFICIENCY & NARRATIVES ("WHO IS ON THE OTHER SIDE?" - 2026)**:
+   - **BAIT Framework**: Assess inefficiencies:
+     - **B**ehavioral: Panic/Euphoria/Aversion?
+     - **A**nalytical: Complexity/Time-horizon edge?
+     - **I**nformational: Hidden data?
+     - **T**echnical: Forced selling/Flows?
+   - **Time Arbitrage**: Is the market discounting a temporary issue as permanent?
+   - **Counterparty**: Who is taking the other side? (Retail/Indexer/Algo)
+   - **Narrative**: What is the dominant story vs reality?
+
 CRITICAL REQUIREMENTS:
 - Show all mathematical steps clearly using actual numbers provided
 - Use the calculated CAPM cost of equity if beta is provided
@@ -688,6 +698,21 @@ Show 1 decimal place. Examples: "$45.2B", "$1.3T", "$789.5M"
     "applicableIfDataProvided": "Complete this section ONLY if quarterly earnings data was provided above"
   },
   
+  "marketEfficiency": {
+    "bait": {
+      "behavioral": "Assessment of behavioral bias (e.g., Recency bias, Loss aversion)",
+      "analytical": "Assessment of analytical edge (e.g., 'Market missing standard deviation of outcome')",
+      "informational": "Assessment of informational differential",
+      "technical": "Assessment of technical pressures (e.g., 'Forced selling by ETFs')"
+    },
+    "counterparty": "Who is the likely counterparty? (e.g., 'Passive flows', 'Retail panic', 'Hedge fund short')",
+    "timeArbitrage": "Is there a time horizon edge? (e.g., 'Arb opportunity: Quarter vs Decade')",
+    "narrative": {
+      "currentStory": "The dominant narrative driving price",
+      "realityGap": "Where the narrative diverges from fundamental reality"
+    }
+  },
+
   "expectationsAnalysis": {
     "impliedExpectations": "What growth rate and ROIC is the current valuation pricing in? Work backwards from P/E or EV/EBITDA.",
     "currentValuation": "Use provided P/E, Price-to-Book, or calculate EV/EBITDA",
@@ -701,7 +726,7 @@ Show 1 decimal place. Examples: "$45.2B", "$1.3T", "$789.5M"
   },
   
   "probabilistic": {
-    "baseRates": "What % of companies in this industry sustain high ROIC?",
+    "baseRates": "MANDATORY REF: '59% of stocks fail to beat T-bills'. What % of industry peers sustain high ROIC?",
     "skillVsLuck": "How much is replicable skill vs luck?",
     "keyUncertainties": "Top 2-3 uncertainties"
   },

@@ -25,6 +25,7 @@ const MauboussinAIAnalyzer = () => {
     earnings: true,
     expectations: true,
     probabilistic: true,
+    marketEfficiency: true,
     management: true,
     conclusion: true
   });
@@ -578,6 +579,24 @@ Link to ROIC: ${analysis.moatAnalysis.linkToROIC}
 ${analysis.moatAnalysis.comparativeMoat ? `\nComparative Moat: ${analysis.moatAnalysis.comparativeMoat}` : ''}
 ${analysis.moatAnalysis.measurability ? `\nMeasurability: ${analysis.moatAnalysis.measurability}` : ''}
 
+ ═══════════════════════════════════════════════════════════════════════
+ 3️⃣  MARKET EFFICIENCY & NARRATIVES (BAIT)
+ ═══════════════════════════════════════════════════════════════════════
+ ${analysis.marketEfficiency ? `
+ BAIT Analysis (Inefficiency Sources):
+ • Behavioral: ${analysis.marketEfficiency.bait?.behavioral || 'N/A'}
+ • Analytical: ${analysis.marketEfficiency.bait?.analytical || 'N/A'}
+ • Informational: ${analysis.marketEfficiency.bait?.informational || 'N/A'}
+ • Technical: ${analysis.marketEfficiency.bait?.technical || 'N/A'}
+ 
+ Counterparty: ${analysis.marketEfficiency.counterparty || 'N/A'}
+ Time Arbitrage: ${analysis.marketEfficiency.timeArbitrage || 'N/A'}
+ 
+ NARRATIVE CHECK:
+ • Current Story: ${analysis.marketEfficiency.narrative?.currentStory || 'N/A'}
+ • Reality Gap: ${analysis.marketEfficiency.narrative?.realityGap || 'N/A'}
+ ` : 'Data not available'}
+
 ${analysis.earningsCallSentiment ? `
 ═══════════════════════════════════════════════════════════════════════
 3️⃣  EARNINGS CALL SENTIMENT
@@ -681,6 +700,16 @@ Generated: ${new Date().toLocaleString()}
       ['Durability', analysis.moatAnalysis.moatDurability],
       ['Evidence', analysis.moatAnalysis.evidenceForMoat],
       [''],
+      ['Market Efficiency (BAIT)', ''],
+      ['Behavioral', analysis.marketEfficiency?.bait?.behavioral || ''],
+      ['Analytical', analysis.marketEfficiency?.bait?.analytical || ''],
+      ['Informational', analysis.marketEfficiency?.bait?.informational || ''],
+      ['Technical', analysis.marketEfficiency?.bait?.technical || ''],
+      ['Counterparty', analysis.marketEfficiency?.counterparty || ''],
+      ['Time Arbitrage', analysis.marketEfficiency?.timeArbitrage || ''],
+      ['Narrative Story', analysis.marketEfficiency?.narrative?.currentStory || ''],
+      ['Reality Gap', analysis.marketEfficiency?.narrative?.realityGap || ''],
+      [''],
       ['Capital Allocation', ''],
       ['Operating Cash Flow', analysis.capitalAllocation.operatingCashFlow],
       ['CapEx', analysis.capitalAllocation.capex],
@@ -767,6 +796,26 @@ Generated: ${new Date().toLocaleString()}
       theme: 'grid',
       headStyles: { fillColor: [128, 0, 128] }
     });
+
+    // Market Efficiency (BAIT) Section
+    if (analysis.marketEfficiency) {
+      doc.text('Market Efficiency & Narratives', 14, doc.lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 20,
+        head: [['Factor', 'Assessment']],
+        body: [
+          ['Behavioral Inefficiency', analysis.marketEfficiency.bait?.behavioral || 'N/A'],
+          ['Analytical Edge', analysis.marketEfficiency.bait?.analytical || 'N/A'],
+          ['Informational Edge', analysis.marketEfficiency.bait?.informational || 'N/A'],
+          ['Technical Factors', analysis.marketEfficiency.bait?.technical || 'N/A'],
+          ['Counterparty', analysis.marketEfficiency.counterparty || 'N/A'],
+          ['Time Arbitrage', analysis.marketEfficiency.timeArbitrage || 'N/A'],
+          ['Narrative Gap', analysis.marketEfficiency.narrative?.realityGap || 'N/A']
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [75, 85, 99] } // Gray
+      });
+    }
 
     // Capital Allocation
     doc.text('Capital Allocation', 14, doc.lastAutoTable.finalY + 15);
@@ -1283,6 +1332,82 @@ Generated: ${new Date().toLocaleString()}
                       <div>
                         <p className="text-gray-600 font-medium mb-1">Sentiment Score:</p>
                         <p className="text-gray-800">{analysis.earningsCallSentiment.sentimentScore}/10</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Market Efficiency & Narratives (BAIT) */}
+              {analysis.marketEfficiency && (
+                <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('marketEfficiency')}
+                    className="w-full px-8 py-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Users size={28} className="text-gray-600" />
+                      <h3 className="text-2xl font-bold text-gray-800">Who Is On The Other Side?</h3>
+                    </div>
+                    {expandedSections.marketEfficiency ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  </button>
+
+                  {expandedSections.marketEfficiency && (
+                    <div className="p-8 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* BAIT Framework */}
+                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 md:col-span-2">
+                          <h4 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                            <Brain size={20} />
+                            BAIT Framework (Sources of Inefficiency)
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 bg-white rounded-lg shadow-sm">
+                              <p className="text-sm font-bold text-purple-600 mb-1">Behavioral</p>
+                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.behavioral || 'N/A'}</p>
+                            </div>
+                            <div className="p-4 bg-white rounded-lg shadow-sm">
+                              <p className="text-sm font-bold text-blue-600 mb-1">Analytical</p>
+                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.analytical || 'N/A'}</p>
+                            </div>
+                            <div className="p-4 bg-white rounded-lg shadow-sm">
+                              <p className="text-sm font-bold text-green-600 mb-1">Informational</p>
+                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.informational || 'N/A'}</p>
+                            </div>
+                            <div className="p-4 bg-white rounded-lg shadow-sm">
+                              <p className="text-sm font-bold text-orange-600 mb-1">Technical</p>
+                              <p className="text-gray-700 text-sm">{analysis.marketEfficiency.bait?.technical || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Counterparty & Time Arb */}
+                        <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                          <h4 className="font-bold text-lg text-blue-900 mb-3">Counterparty Analysis</h4>
+                          <p className="text-gray-700 font-medium mb-1">Who is selling to you?</p>
+                          <p className="text-gray-800">{analysis.marketEfficiency.counterparty || 'N/A'}</p>
+                        </div>
+
+                        <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                          <h4 className="font-bold text-lg text-green-900 mb-3">Time Arbitrage</h4>
+                          <p className="text-gray-700 font-medium mb-1">Time Horizon Edge:</p>
+                          <p className="text-gray-800">{analysis.marketEfficiency.timeArbitrage || 'N/A'}</p>
+                        </div>
+
+                        {/* Narrative */}
+                        <div className="bg-purple-50 p-6 rounded-xl border border-purple-200 md:col-span-2">
+                          <h4 className="font-bold text-lg text-purple-900 mb-3">Narrative Economics</h4>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-sm font-bold text-purple-700 uppercase mb-1">Current Dominant Story</p>
+                              <p className="text-gray-800">{analysis.marketEfficiency.narrative?.currentStory || 'N/A'}</p>
+                            </div>
+                            <div className="border-t border-purple-200 pt-3">
+                              <p className="text-sm font-bold text-purple-700 uppercase mb-1">Gap vs. Reality</p>
+                              <p className="text-gray-800">{analysis.marketEfficiency.narrative?.realityGap || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
