@@ -811,15 +811,15 @@ Generated: ${new Date().toLocaleString()}
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
             <Brain size={48} className="text-purple-600" />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               Mauboussin AI Analyzer v2.1
             </h1>
           </div>
-          <p className="text-xl text-gray-600 mb-2">Automated SEC Financial Analysis with Real ROIC</p>
-          <p className="text-sm text-gray-500">Powered by Alpha Vantage API + Claude Analysis</p>
+          <p className="text-xl text-gray-600 font-medium">Professional Investment Analysis at Your Fingertips</p>
+          <p className="text-sm text-gray-500">Powered by AI + Mauboussin's proven frameworks</p>
         </div>
 
         {/* Error notification only when backend is down */}
@@ -840,88 +840,187 @@ Generated: ${new Date().toLocaleString()}
         )}
 
         {/* Search Box */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 border-2 border-purple-200">
-          <div className="relative">
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={companyInput}
-                  onChange={(e) => setCompanyInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
-                  onFocus={() => searchResults.length > 0 && setShowAutocomplete(true)}
-                  placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
-                  disabled={isAnalyzing}
-                  className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100"
-                />
+        {/* Hero Section with Search */}
+        <div className="bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-8 mb-12 text-white">
 
-                {/* Autocomplete dropdown */}
-                {showAutocomplete && searchResults.length > 0 && !isAnalyzing && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-xl z-10 max-h-64 overflow-y-auto">
-                    {searchResults.map((result, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectCompany(result['1. symbol'], result['2. name'])}
-                        className="w-full px-6 py-3 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="font-semibold text-gray-800">{result['1. symbol']}</div>
-                        <div className="text-sm text-gray-600">{result['2. name']}</div>
-                      </button>
-                    ))}
+          {/* Search Box - Now Inside Hero */}
+          <div className="bg-white rounded-2xl p-6 shadow-xl mb-8">
+            <div className="relative">
+              <div className="flex gap-4">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={companyInput}
+                    onChange={(e) => setCompanyInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && analyzeCompany()}
+                    onFocus={() => searchResults.length > 0 && setShowAutocomplete(true)}
+                    placeholder="Enter company name or ticker (e.g., Apple or AAPL)"
+                    disabled={isAnalyzing}
+                    className="w-full px-6 py-4 text-lg text-gray-800 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 disabled:bg-gray-100 pr-12"
+                  />
+
+                  {/* Clear Button */}
+                  {companyInput && !isAnalyzing && (
+                    <button
+                      onClick={() => setCompanyInput('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={20} />
+                    </button>
+                  )}
+
+                  {/* Autocomplete dropdown */}
+                  {showAutocomplete && searchResults.length > 0 && !isAnalyzing && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-xl shadow-xl z-10 max-h-64 overflow-y-auto">
+                      {searchResults.map((result, index) => (
+                        <button
+                          key={index}
+                          onClick={() => selectCompany(result['1. symbol'], result['2. name'])}
+                          className="w-full px-6 py-3 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-semibold text-gray-800">{result['1. symbol']}</div>
+                          <div className="text-sm text-gray-600">{result['2. name']}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={analyzeCompany}
+                  disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader className="animate-spin" size={24} />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={24} />
+                      Analyze
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Progress indicator - only show during analysis */}
+            {isAnalyzing && (
+              <div className="mt-6">
+                {/* Progress bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Step {currentStep} of {totalSteps}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      {Math.round((currentStep / totalSteps) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Current step description */}
+                {loadingStep && (
+                  <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Loader className="animate-spin text-blue-600" size={20} />
+                      <span className="text-blue-800 font-medium">{loadingStep}</span>
+                    </div>
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={analyzeCompany}
-                disabled={isAnalyzing || !companyInput.trim() || !backendConnected}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 shadow-lg"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader className="animate-spin" size={24} />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Search size={24} />
-                    Analyze
-                  </>
-                )}
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Progress indicator - only show during analysis */}
-          {isAnalyzing && (
-            <div className="mt-6">
-              {/* Progress bar */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Step {currentStep} of {totalSteps}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    {Math.round((currentStep / totalSteps) * 100)}%
-                  </span>
+          {/* Features Grid - Only show when no analysis */}
+          {!analysis && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Feature 1 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Calculator size={32} />
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-                  />
-                </div>
+                <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
+                <p className="text-purple-100">
+                  Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
+                </p>
               </div>
 
-              {/* Current step description */}
-              {loadingStep && (
-                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Loader className="animate-spin text-blue-600" size={20} />
-                    <span className="text-blue-800 font-medium">{loadingStep}</span>
-                  </div>
+              {/* Feature 2 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Shield size={32} />
                 </div>
-              )}
+                <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
+                <p className="text-purple-100">
+                  Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
+                </p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <TrendingUp size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
+                <p className="text-purple-100">
+                  Track record analysis of earnings beats/misses and management credibility assessment
+                </p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <BarChart3 size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
+                <p className="text-purple-100">
+                  Reverse engineer market expectations and run bull/base/bear scenario analysis
+                </p>
+              </div>
+
+              {/* Feature 5 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <Brain size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
+                <p className="text-purple-100">
+                  Apply base rates and skill vs. luck analysis for better investment decisions
+                </p>
+              </div>
+
+              {/* Feature 6 */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
+                <p className="text-purple-100">
+                  Generate comprehensive analysis reports you can save, share, or reference later
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!analysis && (
+            <div className="text-center mt-12">
+              <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
+                <Zap size={20} />
+                <span className="font-semibold">Instant Analysis</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">SEC Data</span>
+                <span className="text-purple-200">•</span>
+                <span className="font-semibold">AI-Powered</span>
+              </div>
             </div>
           )}
         </div>
@@ -1347,93 +1446,7 @@ Generated: ${new Date().toLocaleString()}
         )}
 
         {/* Hero Section - Features Highlight */}
-        {!analysis && (
-          <div className="mt-12 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 rounded-3xl shadow-2xl p-12 text-white">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">Professional Investment Analysis at Your Fingertips</h2>
-              <p className="text-xl text-purple-100">Powered by AI + Mauboussin's proven frameworks</p>
-            </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {/* Feature 1 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Calculator size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Precise ROIC Calculations</h3>
-                <p className="text-purple-100">
-                  Get detailed Return on Invested Capital analysis with full DuPont decomposition and value creation metrics
-                </p>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Shield size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Competitive Moat Analysis</h3>
-                <p className="text-purple-100">
-                  Identify and measure sustainable competitive advantages using Mauboussin's "Measuring the Moat" framework
-                </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <TrendingUp size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Earnings Sentiment</h3>
-                <p className="text-purple-100">
-                  Track record analysis of earnings beats/misses and management credibility assessment
-                </p>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <BarChart3 size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Expectations Investing</h3>
-                <p className="text-purple-100">
-                  Reverse engineer market expectations and run bull/base/bear scenario analysis
-                </p>
-              </div>
-
-              {/* Feature 5 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <Brain size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Probabilistic Thinking</h3>
-                <p className="text-purple-100">
-                  Apply base rates and skill vs. luck analysis for better investment decisions
-                </p>
-              </div>
-
-              {/* Feature 6 */}
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-                <div className="bg-white bg-opacity-20 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                  <FileText size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Exportable Reports</h3>
-                <p className="text-purple-100">
-                  Generate comprehensive analysis reports you can save, share, or reference later
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center mt-12">
-              <div className="inline-flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-3">
-                <Zap size={20} />
-                <span className="font-semibold">Instant Analysis</span>
-                <span className="text-purple-200">•</span>
-                <span className="font-semibold">SEC Data</span>
-                <span className="text-purple-200">•</span>
-                <span className="font-semibold">AI-Powered</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         {/* Placeholder removed - cleaner UI */}
