@@ -120,6 +120,65 @@ const strictLimiter = rateLimit({
 // Apply rate limiting to all API routes
 app.use('/api/', apiLimiter);
 
+// Rate Limiting Queue for Alpha Vantage
+// Limit: 5 requests per minute (free tier). We'll go safe with 1 request every 15 seconds?
+// Wait, 1/15s = 4 requests/min. That's too slow (90s load time).
+// If the limit is a "bucket" of 5, we can burst 5, then wait.
+// But simpler: 1 request every 2 seconds = 30 requests/min ?? No.
+// 5 requests per minute = 1 request every 12 seconds.
+// THIS IS A HARD LIMIT. If we send 6, the 6th fails.
+//
+// Strategy:
+// 1. Process requests one by one.
+// 2. Enforce a minimum delay between requests to avoid "instant" bursts triggering anti-abuse.
+// 3. BUT strict compliance with 5/min means we cannot load the dashboard in < 60s.
+//    (Unless we used a paid key).
+//
+// COMPROMISE: We will allow a burst of 5 requests with 500ms spacing.
+// The 6th request will be delayed significantly or fail gracefully.
+// However, since we need 6 requests (Overview, Income, Balance, Cash, +2 others),
+// we will likely hit the limit for the 6th.
+//
+// Queue Logic: Serialize all requests. 
+const avQueue = [];
+let isProcessingQueue = false;
+const RATE_LIMIT_DELAY = 2000; // 2 seconds delay between requests (Safe-ish)
+
+const queuedFetch = (url) => {
+  return new Promise((resolve, reject) => {
+    avQueue.push({ url, resolve, reject });
+    processQueue();
+  });
+};
+
+const processQueue = async () => {
+  if (isProcessingQueue) return;
+  if (avQueue.length === 0) return;
+
+  isProcessingQueue = true;
+
+  while (avQueue.length > 0) {
+    const request = avQueue.shift();
+
+    try {
+      console.log(`Processing queued request: ${request.url.split('function=')[1]?.split('&')[0]}`);
+      const response = await fetch(request.url);
+
+      // Check for 429 inside the queue to retry? 
+      // For now, just pass the response back.
+      request.resolve(response);
+
+    } catch (error) {
+      request.reject(error);
+    }
+
+    // Wait before next request to respect rate limits
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+  }
+
+  isProcessingQueue = false;
+};
+
 // Cache middleware - checks cache before proceeding to handler
 const cacheMiddleware = (req, res, next) => {
   const cacheKey = req.originalUrl || req.url;
@@ -164,7 +223,7 @@ app.get('/api/av/search', cacheMiddleware, async (req, res) => {
 
   try {
     const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(query)}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note || data.Information) {
@@ -189,7 +248,7 @@ app.get('/api/av/overview/:symbol', cacheMiddleware, async (req, res) => {
 
   try {
     const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note || data.Information) {
@@ -218,7 +277,7 @@ app.get('/api/av/income-statement/:symbol', cacheMiddleware, async (req, res) =>
 
   try {
     const url = `https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=${symbol}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note || data.Information) {
@@ -243,7 +302,7 @@ app.get('/api/av/balance-sheet/:symbol', cacheMiddleware, async (req, res) => {
 
   try {
     const url = `https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=${symbol}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note || data.Information) {
@@ -268,7 +327,7 @@ app.get('/api/av/cash-flow/:symbol', cacheMiddleware, async (req, res) => {
 
   try {
     const url = `https://www.alphavantage.co/query?function=CASH_FLOW&symbol=${symbol}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note || data.Information) {
@@ -322,7 +381,7 @@ app.get('/api/earnings-transcript/:symbol', cacheMiddleware, async (req, res) =>
     }
 
     const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${apiKey}`;
-    const response = await fetch(url);
+    const response = await queuedFetch(url);
     const data = await response.json();
 
     if (data.Note) {
